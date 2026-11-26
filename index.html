@@ -1181,7 +1181,7 @@
       const div = DIVISIONS[state.division];
       const allowedPatterns = div.patterns.filter(p => state.enabledIds.has(p.id));
       const allowUnisons = document.getElementById('unisonCheck').checked;
-      const densityFactor = state.density / 100;
+      const p = state.density / 100; // Probabilité exacte par note (0.00 à 1.00)
 
       state.scoreData = [];
 
@@ -1189,25 +1189,37 @@
         const measure = [];
         for (let b = 0; b < div.beatsPerMeasure; b++) {
           let chosenPattern;
-          if (densityFactor === 0) {
-            chosenPattern = div.patterns[0];
+
+          if (p === 0) {
+            chosenPattern = div.patterns[0]; // 0% -> Que des silences
           } else {
+            // Probabilité binomiale exacte de chaque figure autorisée selon p
             const weighted = allowedPatterns.map(pat => {
-              const hits = pat.mask.reduce((a, c) => a + c, 0);
-              const hitRatio = hits / pat.mask.length;
-              const diff = Math.abs(hitRatio - densityFactor);
-              const weight = Math.max(0.05, 1.2 - diff * 1.3);
-              return { pat, weight };
-            });
-            const totalW = weighted.reduce((acc, w) => acc + w.weight, 0);
-            let r = Math.random() * totalW;
-            chosenPattern = weighted[0].pat;
-            for (const item of weighted) {
-              r -= item.weight;
-              if (r <= 0) {
-                chosenPattern = item.pat;
-                break;
+              let prob = 1;
+              for (let i = 0; i < pat.mask.length; i++) {
+                prob *= pat.mask[i] === 1 ? p : (1 - p);
               }
+              return { pat, weight: prob };
+            });
+
+            const totalW = weighted.reduce((acc, item) => acc + item.weight, 0);
+            if (totalW > 0) {
+              let r = Math.random() * totalW;
+              chosenPattern = weighted[weighted.length - 1].pat;
+              for (const item of weighted) {
+                r -= item.weight;
+                if (r <= 0) {
+                  chosenPattern = item.pat;
+                  break;
+                }
+              }
+            } else {
+              // Si une figure exacte (ex: toutes doubles à 100%) est bannie, prend la plus proche autorisée
+              chosenPattern = allowedPatterns.reduce((best, curr) => {
+                const bestHits = best.mask.reduce((a, c) => a + c, 0) / best.mask.length;
+                const currHits = curr.mask.reduce((a, c) => a + c, 0) / curr.mask.length;
+                return Math.abs(currHits - p) < Math.abs(bestHits - p) ? curr : best;
+              }, allowedPatterns[0]);
             }
           }
 
@@ -1218,11 +1230,11 @@
             if (chosenPattern.mask[s] === 1) {
               const rand = Math.random();
               if (allowUnisons && rand < 0.22) {
-                voice = 3;
+                voice = 3; // Unisson GC + CC
               } else if (rand < 0.61) {
-                voice = 1;
+                voice = 1; // Grosse caisse
               } else {
-                voice = 2;
+                voice = 2; // Caisse claire
               }
             }
             beatSubs.push({ hh, voice });
