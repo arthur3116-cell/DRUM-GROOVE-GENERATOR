@@ -1,0 +1,1608 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Drum Groove & Coordination Generator — Cahier Rythmique</title>
+  <style>
+    :root {
+      --bg-paper: #FAF6F0;
+      --bg-card: #FFFDF9;
+      --bg-muted: #EFE8DD;
+      --ink-dark: #3B281B;
+      --ink-brown: #5C402C;
+      --ink-light: #8A715D;
+      --accent-green: #1E5631;
+      --accent-green-bg: #EBF5EE;
+      --accent-terra: #C86D51;
+      --border-brown: #D6C7B6;
+      --shadow-soft: 0 4px 16px rgba(59, 40, 27, 0.08);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      background-color: var(--bg-paper);
+      background-image: radial-gradient(#dfd3c3 1px, transparent 1px);
+      background-size: 20px 20px;
+      color: var(--ink-dark);
+      line-height: 1.5;
+      padding: 20px;
+    }
+
+    .app-container {
+      max-width: 1240px;
+      margin: 0 auto;
+    }
+
+    /* Header */
+    header {
+      background: var(--ink-dark);
+      color: #FFFDF9;
+      padding: 20px 28px;
+      border-radius: 14px;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      box-shadow: var(--shadow-soft);
+      margin-bottom: 22px;
+      border-bottom: 4px solid var(--accent-terra);
+    }
+
+    header h1 {
+      font-size: 1.5rem;
+      letter-spacing: 0.3px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    header p {
+      font-size: 0.9rem;
+      color: #E3D5C5;
+    }
+
+    .header-actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    /* Buttons */
+    button {
+      cursor: pointer;
+      font-family: inherit;
+      font-weight: 600;
+      border: none;
+      border-radius: 8px;
+      transition: all 0.15s ease;
+    }
+
+    .btn-primary {
+      background: var(--accent-terra);
+      color: #fff;
+      padding: 10px 18px;
+      font-size: 0.95rem;
+    }
+    .btn-primary:hover { background: #b55c40; transform: translateY(-1px); }
+
+    .btn-play {
+      background: var(--accent-green);
+      color: #fff;
+      padding: 10px 20px;
+      font-size: 0.95rem;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .btn-play.playing {
+      background: #A63A2B;
+    }
+
+    .btn-secondary {
+      background: #FFFDF9;
+      color: var(--ink-dark);
+      border: 1.5px solid var(--border-brown);
+      padding: 8px 14px;
+      font-size: 0.85rem;
+    }
+    .btn-secondary:hover { background: var(--bg-muted); }
+
+    /* Division Selector Bar */
+    .division-bar {
+      background: var(--bg-card);
+      border: 2px solid var(--border-brown);
+      border-radius: 12px;
+      padding: 14px 20px;
+      margin-bottom: 20px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      box-shadow: var(--shadow-soft);
+    }
+
+    .division-tabs {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .div-tab {
+      padding: 9px 16px;
+      border-radius: 8px;
+      background: var(--bg-muted);
+      color: var(--ink-brown);
+      border: 1.5px solid transparent;
+      font-size: 0.9rem;
+    }
+
+    .div-tab.active {
+      background: var(--ink-dark);
+      color: #FFFDF9;
+      border-color: var(--ink-dark);
+    }
+
+    /* Grid Layout for Modules */
+    .modules-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));
+      gap: 18px;
+      margin-bottom: 22px;
+    }
+
+    .card {
+      background: var(--bg-card);
+      border: 2px solid var(--border-brown);
+      border-radius: 12px;
+      padding: 18px;
+      box-shadow: var(--shadow-soft);
+    }
+
+    .card-title {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--ink-dark);
+      margin-bottom: 12px;
+      padding-bottom: 8px;
+      border-bottom: 1.5px dashed var(--border-brown);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .badge-step {
+      background: var(--ink-brown);
+      color: #fff;
+      font-size: 0.72rem;
+      padding: 2px 8px;
+      border-radius: 99px;
+      text-transform: uppercase;
+    }
+
+    /* Module 1: Hi-Hat */
+    .hh-grid {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .hh-btn {
+      flex: 1;
+      padding: 12px 6px;
+      background: var(--bg-muted);
+      border: 2px solid var(--border-brown);
+      border-radius: 10px;
+      text-align: center;
+      color: var(--ink-brown);
+    }
+
+    .hh-btn.active {
+      background: var(--ink-dark);
+      color: #FFFDF9;
+      border-color: var(--ink-dark);
+    }
+
+    .hh-btn .syllable {
+      display: block;
+      font-size: 1.05rem;
+      font-weight: 800;
+    }
+
+    .hh-btn .symbol {
+      display: block;
+      font-size: 0.85rem;
+      margin-top: 2px;
+      opacity: 0.85;
+    }
+
+    .preset-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .preset-chip {
+      font-size: 0.78rem;
+      padding: 5px 10px;
+      background: var(--bg-paper);
+      border: 1px solid var(--border-brown);
+      border-radius: 6px;
+      color: var(--ink-brown);
+    }
+    .preset-chip:hover {
+      background: var(--ink-brown);
+      color: #fff;
+    }
+
+    /* Module 3 & 4: Density, Unison, Measures, Tempo */
+    .control-group {
+      margin-bottom: 14px;
+    }
+
+    .control-label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.88rem;
+      font-weight: 600;
+      margin-bottom: 6px;
+    }
+
+    input[type="range"] {
+      width: 100%;
+      accent-color: var(--accent-terra);
+      cursor: pointer;
+    }
+
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--bg-paper);
+      padding: 10px 12px;
+      border-radius: 8px;
+      border: 1px solid var(--border-brown);
+      margin-bottom: 10px;
+    }
+
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 46px;
+      height: 24px;
+    }
+    .switch input { opacity: 0; width: 0; height: 0; }
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      inset: 0;
+      background-color: #C7B8A8;
+      border-radius: 24px;
+      transition: .2s;
+    }
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 18px;
+      width: 18px;
+      left: 3px;
+      bottom: 3px;
+      background-color: white;
+      border-radius: 50%;
+      transition: .2s;
+    }
+    input:checked + .slider { background-color: var(--accent-green); }
+    input:checked + .slider:before { transform: translateX(22px); }
+
+    .measure-selector {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+    .m-btn {
+      padding: 6px 10px;
+      background: var(--bg-muted);
+      border: 1px solid var(--border-brown);
+      border-radius: 6px;
+      font-size: 0.82rem;
+    }
+    .m-btn.active {
+      background: var(--accent-terra);
+      color: #fff;
+      border-color: var(--accent-terra);
+    }
+
+    /* Module 2: Rhythm Library */
+    .library-section {
+      margin-bottom: 24px;
+    }
+
+    .library-toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 14px;
+      align-items: center;
+    }
+
+    .rhythm-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+      gap: 12px;
+    }
+
+    .rhythm-card {
+      background: #FFFFFF;
+      border: 2px solid var(--ink-dark);
+      border-radius: 10px;
+      padding: 10px 12px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      position: relative;
+    }
+
+    .rhythm-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(59, 40, 27, 0.14);
+    }
+
+    .rhythm-card.banned {
+      background: #EFE9E1;
+      border: 2px dashed #B5A493;
+      opacity: 0.72;
+    }
+
+    .rhythm-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 4px;
+    }
+
+    .rhythm-name {
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: var(--ink-dark);
+    }
+
+    .status-pill {
+      font-size: 0.68rem;
+      font-weight: 800;
+      padding: 2px 7px;
+      border-radius: 5px;
+      text-transform: uppercase;
+    }
+
+    .rhythm-card:not(.banned) .status-pill {
+      background: var(--accent-green-bg);
+      color: var(--accent-green);
+      border: 1px solid var(--accent-green);
+    }
+
+    .rhythm-card.banned .status-pill {
+      background: #E2D8CE;
+      color: #6E5D4F;
+    }
+
+    .rhythm-svg-box {
+      width: 100%;
+      height: 64px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .rhythm-card-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.75rem;
+      color: var(--ink-light);
+      border-top: 1px solid #F0E8DE;
+      padding-top: 4px;
+      margin-top: 2px;
+    }
+
+    /* Sheet Music Area */
+    .sheet-wrapper {
+      background: #FFFFFF;
+      border: 2px solid var(--ink-dark);
+      border-radius: 14px;
+      padding: 26px 28px;
+      box-shadow: var(--shadow-soft);
+    }
+
+    .sheet-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      border-bottom: 2px solid var(--ink-dark);
+      padding-bottom: 12px;
+      margin-bottom: 18px;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .sheet-title {
+      font-size: 1.3rem;
+      font-weight: 800;
+      color: var(--ink-dark);
+    }
+
+    .sheet-subtitle {
+      font-size: 0.85rem;
+      color: var(--ink-light);
+    }
+
+    .sheet-hint {
+      font-size: 0.8rem;
+      background: var(--bg-paper);
+      padding: 5px 10px;
+      border-radius: 6px;
+      border: 1px solid var(--border-brown);
+      color: var(--ink-brown);
+    }
+
+    #scoreContainer {
+      width: 100%;
+      overflow-x: auto;
+    }
+
+    .legend-footer {
+      margin-top: 18px;
+      padding-top: 12px;
+      border-top: 1px solid #DDD2C5;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    /* Print Styles */
+    @media print {
+      body {
+        background: #fff;
+        padding: 0;
+      }
+      header, .division-bar, .modules-grid, .library-section, .sheet-hint {
+        display: none !important;
+      }
+      .sheet-wrapper {
+        border: none;
+        box-shadow: none;
+        padding: 0;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-container">
+    <header>
+      <div>
+        <h1>🥁 Cahier Rythmique Batterie</h1>
+        <p>Générateur d'exercices d'indépendance Charley / Grosse Caisse / Caisse Claire</p>
+      </div>
+      <div class="header-actions">
+        <button class="btn-play" id="playBtn" onclick="togglePlayback()">▶ Écouter</button>
+        <button class="btn-primary" onclick="generateScore()">🎲 Nouvelle Partition</button>
+        <button class="btn-secondary" onclick="window.print()">🖨️ Imprimer / PDF</button>
+      </div>
+    </header>
+
+    <!-- Division Selector -->
+    <div class="division-bar">
+      <div>
+        <strong style="font-size:0.95rem;">Division rythmique :</strong>
+        <span id="timeSigBadge" style="margin-left:8px; background:var(--bg-muted); padding:3px 9px; border-radius:6px; font-weight:700; font-size:0.85rem;">Chiffrage : 4/4</span>
+      </div>
+      <div class="division-tabs" id="divisionTabs">
+        <button class="div-tab active" data-div="16th" onclick="setDivision('16th')">Doubles croches (4/tps)</button>
+        <button class="div-tab" data-div="triplet" onclick="setDivision('triplet')">Triolet (12/8)</button>
+        <button class="div-tab" data-div="quintuplet" onclick="setDivision('quintuplet')">Quintolet (5/tps)</button>
+        <button class="div-tab" data-div="sextuplet" onclick="setDivision('sextuplet')">Sextolet (12/8)</button>
+      </div>
+    </div>
+
+    <!-- Modules 1, 3, 4 -->
+    <div class="modules-grid">
+      <!-- Module 1: Hi-Hat Pattern -->
+      <div class="card">
+        <div class="card-title">
+          <span>1. Ostinato Charley</span>
+          <span class="badge-step">Main droite</span>
+        </div>
+        <div class="hh-grid" id="hhGrid"></div>
+        <div class="preset-row" id="hhPresets"></div>
+      </div>
+
+      <!-- Module 3: Density & Tempo -->
+      <div class="card">
+        <div class="card-title">
+          <span>3. Densité & Tempo</span>
+          <span class="badge-step">Difficulté</span>
+        </div>
+        <div class="control-group">
+          <div class="control-label">
+            <span>Densité GC / CC :</span>
+            <span id="densityVal" style="color:var(--accent-terra); font-weight:800;">55%</span>
+          </div>
+          <input type="range" id="densityRange" min="0" max="100" value="55" oninput="updateDensity(this.value)" />
+          <div style="display:flex; justify-content:space-between; font-size:0.74rem; color:var(--ink-light);">
+            <span>0% (Silences)</span>
+            <span>50% (Équilibré)</span>
+            <span>100% (Chargé)</span>
+          </div>
+        </div>
+
+        <div class="control-group" style="margin-bottom:0;">
+          <div class="control-label">
+            <span>Tempo (Métronome) :</span>
+            <span id="tempoVal" style="color:var(--ink-dark); font-weight:800;">85 BPM</span>
+          </div>
+          <input type="range" id="tempoRange" min="45" max="160" value="85" oninput="updateTempo(this.value)" />
+        </div>
+      </div>
+
+      <!-- Module 4: Unisons & Measures -->
+      <div class="card">
+        <div class="card-title">
+          <span>4. Unissons & Mesures</span>
+          <span class="badge-step">Structure</span>
+        </div>
+
+        <div class="toggle-row">
+          <div>
+            <strong style="font-size:0.88rem; display:block;">Unissons GC + CC</strong>
+            <span style="font-size:0.76rem; color:var(--ink-light);">Frapper Grosse Caisse et Caisse Claire ensemble</span>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="unisonCheck" checked onchange="generateScore()" />
+            <span class="slider"></span>
+          </label>
+        </div>
+
+        <div class="toggle-row">
+          <div>
+            <strong style="font-size:0.88rem; display:block;">Clic métronome</strong>
+            <span style="font-size:0.76rem; color:var(--ink-light);">Marquer les temps pendant la lecture</span>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="metroCheck" checked />
+            <span class="slider"></span>
+          </label>
+        </div>
+
+        <div style="margin-top:10px;">
+          <div class="control-label">
+            <span>Nombre de mesures (1 à 16) :</span>
+            <strong id="measureCountLabel">4 mesures</strong>
+          </div>
+          <div class="measure-selector" id="measureButtons"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Module 2: Rhythm Library -->
+    <div class="card library-section">
+      <div class="card-title">
+        <span>2. Bibliothèque des figures rythmiques (Cliquez pour activer / bannir)</span>
+        <span class="badge-step" id="activeCountBadge">16 actives</span>
+      </div>
+      <div class="library-toolbar" id="libraryToolbar"></div>
+      <div class="rhythm-grid" id="rhythmGrid"></div>
+    </div>
+
+    <!-- Sheet Music Output -->
+    <div class="sheet-wrapper">
+      <div class="sheet-header">
+        <div>
+          <div class="sheet-title" id="sheetTitle">Exercice d'indépendance — Doubles croches (4/4)</div>
+          <div class="sheet-subtitle" id="sheetMeta">4 mesures • Tempo conseillé : 85 BPM • Unissons autorisés</div>
+        </div>
+        <div class="sheet-hint">
+          💡 <strong>Édition manuelle :</strong> Cliquez directement sur une note de la partition pour changer (GC → CC → Unisson → Silence)
+        </div>
+      </div>
+
+      <div id="scoreContainer"></div>
+
+      <!-- Drum Legend on Staff -->
+      <div class="legend-footer">
+        <div id="legendSvgContainer"></div>
+        <div style="font-size:0.78rem; color:var(--ink-light);">
+          Cahier pédagogique batterie • Généré automatiquement
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // =========================================================================
+    // 1. DATA DEFINITIONS FOR DIVISIONS & RHYTHM LIBRARIES
+    // =========================================================================
+    const DIVISIONS = {
+      '16th': {
+        name: 'Doubles croches (4/tps)',
+        timeSigTop: '4',
+        timeSigBottom: '4',
+        beatsPerMeasure: 4,
+        subdivsPerBeat: 4,
+        syllables: ['1', 'e', '&', 'a'],
+        defaultHH: [1, 0, 1, 0],
+        presets: [
+          { label: 'Noires', pattern: [1, 0, 0, 0] },
+          { label: 'Croches', pattern: [1, 0, 1, 0] },
+          { label: 'Contretemps (&)', pattern: [0, 0, 1, 0] },
+          { label: 'Toutes doubles', pattern: [1, 1, 1, 1] },
+          { label: 'Galop (1 e &)', pattern: [1, 1, 1, 0] },
+          { label: 'Galop inv. (1 & a)', pattern: [1, 0, 1, 1] }
+        ],
+        patterns: [
+          { id: '16_0', name: 'Soupir (Silence)', level: 1, mask: [0, 0, 0, 0] },
+          { id: '16_1', name: 'Noire (1er temps)', level: 1, mask: [1, 0, 0, 0] },
+          { id: '16_2', name: 'Contretemps (&)', level: 1, mask: [0, 0, 1, 0] },
+          { id: '16_3', name: 'Deux croches (1 &)', level: 1, mask: [1, 0, 1, 0] },
+          { id: '16_4', name: 'Croche pointée - double', level: 2, mask: [1, 0, 0, 1] },
+          { id: '16_5', name: '2 doubles - croche', level: 2, mask: [1, 1, 1, 0] },
+          { id: '16_6', name: 'Croche - 2 doubles', level: 2, mask: [1, 0, 1, 1] },
+          { id: '16_7', name: '4 doubles croches', level: 2, mask: [1, 1, 1, 1] },
+          { id: '16_8', name: '2e double seule (e)', level: 2, mask: [0, 1, 0, 0] },
+          { id: '16_9', name: '4e double seule (a)', level: 2, mask: [0, 0, 0, 1] },
+          { id: '16_10', name: '2 doubles + 1/2 soupir', level: 3, mask: [1, 1, 0, 0] },
+          { id: '16_11', name: '1/2 soupir + 2 doubles', level: 3, mask: [0, 0, 1, 1] },
+          { id: '16_12', name: 'Syncopette (e &)', level: 3, mask: [0, 1, 1, 0] },
+          { id: '16_13', name: 'Double - croche - double', level: 3, mask: [1, 1, 0, 1] },
+          { id: '16_14', name: '1/4 soupir + 3 doubles', level: 3, mask: [0, 1, 1, 1] },
+          { id: '16_15', name: 'Contre-doubles (e a)', level: 3, mask: [0, 1, 0, 1] }
+        ]
+      },
+      'triplet': {
+        name: 'Triolet (12/8)',
+        timeSigTop: '12',
+        timeSigBottom: '8',
+        beatsPerMeasure: 4,
+        subdivsPerBeat: 3,
+        syllables: ['1', 'Tri', 'O'],
+        defaultHH: [1, 1, 1],
+        presets: [
+          { label: 'Noires pointées', pattern: [1, 0, 0] },
+          { label: '3 croches (12/8)', pattern: [1, 1, 1] },
+          { label: 'Shuffle (1 - O)', pattern: [1, 0, 1] },
+          { label: 'Milieu (Tri)', pattern: [0, 1, 0] }
+        ],
+        patterns: [
+          { id: 'tr_0', name: 'Noire pointée (Silence)', level: 1, mask: [0, 0, 0] },
+          { id: 'tr_1', name: 'Noire pointée (1)', level: 1, mask: [1, 0, 0] },
+          { id: 'tr_2', name: '3 croches liées', level: 1, mask: [1, 1, 1] },
+          { id: 'tr_3', name: 'Shuffle (Noire + croche)', level: 1, mask: [1, 0, 1] },
+          { id: 'tr_4', name: 'Croche + noire (1 Tri)', level: 2, mask: [1, 1, 0] },
+          { id: 'tr_5', name: '2e croche seule (Tri)', level: 2, mask: [0, 1, 0] },
+          { id: 'tr_6', name: '3e croche seule (O)', level: 2, mask: [0, 0, 1] },
+          { id: 'tr_7', name: '1/2 soupir + 2 croches', level: 3, mask: [0, 1, 1] }
+        ]
+      },
+      'quintuplet': {
+        name: 'Quintolet (5/tps)',
+        timeSigTop: '4',
+        timeSigBottom: '4',
+        beatsPerMeasure: 4,
+        subdivsPerBeat: 5,
+        syllables: ['1', '2', '3', '4', '5'],
+        defaultHH: [1, 0, 0, 0, 0],
+        presets: [
+          { label: 'Noires (1)', pattern: [1, 0, 0, 0, 0] },
+          { label: 'Toutes les 5', pattern: [1, 1, 1, 1, 1] },
+          { label: '1 & 4', pattern: [1, 0, 0, 1, 0] },
+          { label: '1 & 3', pattern: [1, 0, 1, 0, 0] }
+        ],
+        patterns: [
+          { id: 'qu_0', name: 'Soupir', level: 1, mask: [0, 0, 0, 0, 0] },
+          { id: 'qu_1', name: 'Noire (1)', level: 1, mask: [1, 0, 0, 0, 0] },
+          { id: 'qu_2', name: '5 notes liées', level: 1, mask: [1, 1, 1, 1, 1] },
+          { id: 'qu_3', name: '1 - 4', level: 2, mask: [1, 0, 0, 1, 0] },
+          { id: 'qu_4', name: '1 - 3', level: 2, mask: [1, 0, 1, 0, 0] },
+          { id: 'qu_5', name: '1 - 3 - 5', level: 2, mask: [1, 0, 1, 0, 1] },
+          { id: 'qu_6', name: '1 - 2 - 4', level: 3, mask: [1, 1, 0, 1, 0] },
+          { id: 'qu_7', name: '2 - 4 - 5', level: 3, mask: [0, 1, 0, 1, 1] }
+        ]
+      },
+      'sextuplet': {
+        name: 'Sextolet (12/8)',
+        timeSigTop: '12',
+        timeSigBottom: '8',
+        beatsPerMeasure: 4,
+        subdivsPerBeat: 6,
+        syllables: ['1', 'e', 'Tri', 'e', 'O', 'e'],
+        defaultHH: [1, 0, 1, 0, 1, 0],
+        presets: [
+          { label: 'Noires pointées', pattern: [1, 0, 0, 0, 0, 0] },
+          { label: '3 croches (12/8)', pattern: [1, 0, 1, 0, 1, 0] },
+          { label: '6 doubles', pattern: [1, 1, 1, 1, 1, 1] },
+          { label: 'Shuffle (1 - O)', pattern: [1, 0, 0, 0, 1, 0] }
+        ],
+        patterns: [
+          { id: 'sx_0', name: 'Noire pointée (Silence)', level: 1, mask: [0, 0, 0, 0, 0, 0] },
+          { id: 'sx_1', name: 'Noire pointée (1)', level: 1, mask: [1, 0, 0, 0, 0, 0] },
+          { id: 'sx_2', name: '3 croches (1 - Tri - O)', level: 1, mask: [1, 0, 1, 0, 1, 0] },
+          { id: 'sx_3', name: '6 doubles liées', level: 2, mask: [1, 1, 1, 1, 1, 1] },
+          { id: 'sx_4', name: '2 doubles + 2 croches', level: 2, mask: [1, 1, 1, 0, 1, 0] },
+          { id: 'sx_5', name: 'Croche + 4 doubles', level: 2, mask: [1, 0, 1, 1, 1, 1] },
+          { id: 'sx_6', name: 'Galops ternaires', level: 3, mask: [1, 1, 0, 1, 1, 0] },
+          { id: 'sx_7', name: 'Syncopes internes', level: 3, mask: [0, 1, 1, 0, 1, 1] }
+        ]
+      }
+    };
+
+    // =========================================================================
+    // 2. APPLICATION STATE
+    // =========================================================================
+    let state = {
+      division: '16th',
+      hhPattern: [1, 0, 1, 0],
+      enabledIds: new Set(),
+      density: 55,
+      tempo: 85,
+      measuresCount: 4,
+      scoreData: [], // Array of measures -> beats -> subdivisions: { hh: 0|1, voice: 0(none)|1(kick)|2(snare)|3(unison) }
+      isPlaying: false,
+      currentPlayStep: -1
+    };
+
+    // Initialize enabled patterns
+    function resetEnabledForDivision(divKey) {
+      state.enabledIds.clear();
+      DIVISIONS[divKey].patterns.forEach(p => state.enabledIds.add(p.id));
+    }
+
+    // =========================================================================
+    // 3. UI RENDERING FOR CONTROLS & LIBRARY
+    // =========================================================================
+    function setDivision(divKey) {
+      stopPlayback();
+      state.division = divKey;
+      const div = DIVISIONS[divKey];
+      state.hhPattern = [...div.defaultHH];
+      resetEnabledForDivision(divKey);
+
+      document.querySelectorAll('.div-tab').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.div === divKey);
+      });
+      document.getElementById('timeSigBadge').textContent = `Chiffrage : ${div.timeSigTop}/${div.timeSigBottom}`;
+
+      renderHHModule();
+      renderLibraryModule();
+      generateScore();
+    }
+
+    function renderHHModule() {
+      const div = DIVISIONS[state.division];
+      const grid = document.getElementById('hhGrid');
+      grid.innerHTML = '';
+
+      div.syllables.forEach((syl, idx) => {
+        const active = state.hhPattern[idx] === 1;
+        const btn = document.createElement('button');
+        btn.className = 'hh-btn' + (active ? ' active' : '');
+        btn.innerHTML = `<span class="syllable">${syl}</span><span class="symbol">${active ? '✕ Charley' : '—'}</span>`;
+        btn.onclick = () => {
+          state.hhPattern[idx] = state.hhPattern[idx] ? 0 : 1;
+          applyHHToScore();
+          renderHHModule();
+          renderScoreSVG();
+        };
+        grid.appendChild(btn);
+      });
+
+      const presetsEl = document.getElementById('hhPresets');
+      presetsEl.innerHTML = '';
+      div.presets.forEach(p => {
+        const chip = document.createElement('button');
+        chip.className = 'preset-chip';
+        chip.textContent = p.label;
+        chip.onclick = () => {
+          state.hhPattern = [...p.pattern];
+          applyHHToScore();
+          renderHHModule();
+          renderScoreSVG();
+        };
+        presetsEl.appendChild(chip);
+      });
+    }
+
+    function applyHHToScore() {
+      state.scoreData.forEach(measure => {
+        measure.forEach(beat => {
+          beat.forEach((sub, idx) => {
+            sub.hh = state.hhPattern[idx] || 0;
+          });
+        });
+      });
+    }
+
+    function renderMeasureButtons() {
+      const container = document.getElementById('measureButtons');
+      container.innerHTML = '';
+      [1, 2, 4, 6, 8, 12, 16].forEach(num => {
+        const btn = document.createElement('button');
+        btn.className = 'm-btn' + (state.measuresCount === num ? ' active' : '');
+        btn.textContent = num;
+        btn.onclick = () => {
+          state.measuresCount = num;
+          document.getElementById('measureCountLabel').textContent = `${num} mesure${num > 1 ? 's' : ''}`;
+          renderMeasureButtons();
+          generateScore();
+        };
+        container.appendChild(btn);
+      });
+    }
+
+    function renderLibraryModule() {
+      const div = DIVISIONS[state.division];
+      const toolbar = document.getElementById('libraryToolbar');
+      toolbar.innerHTML = `
+        <button class="btn-secondary" onclick="filterLibrary('all')">Tout activer</button>
+        <button class="btn-secondary" onclick="filterLibrary('lvl1')">Niveau 1 (Base)</button>
+        <button class="btn-secondary" onclick="filterLibrary('lvl2')">Niveau 1 + 2</button>
+        <button class="btn-secondary" onclick="filterLibrary('none')">Tout bannir</button>
+      `;
+
+      const grid = document.getElementById('rhythmGrid');
+      grid.innerHTML = '';
+
+      let activeCount = 0;
+      div.patterns.forEach(pat => {
+        const isEnabled = state.enabledIds.has(pat.id);
+        if (isEnabled) activeCount++;
+
+        const card = document.createElement('div');
+        card.className = 'rhythm-card' + (isEnabled ? '' : ' banned');
+        card.onclick = () => {
+          if (state.enabledIds.has(pat.id)) {
+            if (state.enabledIds.size > 1) state.enabledIds.delete(pat.id);
+          } else {
+            state.enabledIds.add(pat.id);
+          }
+          renderLibraryModule();
+          generateScore();
+        };
+
+        const activeSyllables = pat.mask
+          .map((v, i) => (v ? div.syllables[i] : '·'))
+          .join(' ');
+
+        card.innerHTML = `
+          <div class="rhythm-card-header">
+            <span class="rhythm-name">${pat.name}</span>
+            <span class="status-pill">${isEnabled ? '✓ Actif' : 'Banni'}</span>
+          </div>
+          <div class="rhythm-svg-box">${renderPureFigureSVG(pat.mask, state.division)}</div>
+          <div class="rhythm-card-footer">
+            <span>Niveau ${pat.level}</span>
+            <strong style="color:var(--ink-brown); letter-spacing:1px;">${activeSyllables}</strong>
+          </div>
+        `;
+        grid.appendChild(card);
+      });
+
+      document.getElementById('activeCountBadge').textContent = `${activeCount} / ${div.patterns.length} actives`;
+    }
+
+    function filterLibrary(mode) {
+      const div = DIVISIONS[state.division];
+      state.enabledIds.clear();
+      if (mode === 'all') {
+        div.patterns.forEach(p => state.enabledIds.add(p.id));
+      } else if (mode === 'lvl1') {
+        div.patterns.filter(p => p.level === 1).forEach(p => state.enabledIds.add(p.id));
+      } else if (mode === 'lvl2') {
+        div.patterns.filter(p => p.level <= 2).forEach(p => state.enabledIds.add(p.id));
+      } else if (mode === 'none') {
+        state.enabledIds.add(div.patterns[0].id); // Keep at least silence
+      }
+      renderLibraryModule();
+      generateScore();
+    }
+
+    function updateDensity(val) {
+      state.density = parseInt(val, 10);
+      document.getElementById('densityVal').textContent = `${state.density}%`;
+      generateScore();
+    }
+
+    function updateTempo(val) {
+      state.tempo = parseInt(val, 10);
+      document.getElementById('tempoVal').textContent = `${state.tempo} BPM`;
+      updateSheetHeader();
+    }
+
+    // =========================================================================
+    // 4. ENGRAVING ENGINE (PURE FIGURES & STRICT INNER HOOKS)
+    // =========================================================================
+    function getNoteDurationsFromMask(mask, division) {
+      const n = mask.length;
+      const notes = [];
+      let i = 0;
+      while (i < n) {
+        if (mask[i] === 1) {
+          let span = 1;
+          while (i + span < n && mask[i + span] === 0) {
+            span++;
+          }
+          notes.push({ start: i, span, isRest: false });
+          i += span;
+        } else {
+          let span = 1;
+          while (i + span < n && mask[i + span] === 0) {
+            span++;
+          }
+          notes.push({ start: i, span, isRest: true });
+          i += span;
+        }
+      }
+      return notes;
+    }
+
+    function drawRestGlyph(x, y, span, nSub) {
+      // Standard musical rest glyphs
+      if (span === nSub) {
+        // Full beat rest (quarter rest or dotted quarter rest)
+        const dot = (nSub === 3 || nSub === 6) ? `<circle cx="${x + 9}" cy="${y - 3}" r="1.8" fill="#3B281B"/>` : '';
+        return `<path d="M${x-2},${y-11} L${x+3},${y-5} L${x-2},${y+1} L${x+3},${y+7} C${x-1},${y+6} ${x-3},${y+9} ${x+1},${y+12}" fill="none" stroke="#3B281B" stroke-width="2.1" stroke-linecap="round"/>${dot}`;
+      }
+      if ((nSub === 4 && span === 2) || (nSub === 6 && span === 3)) {
+        // Eighth rest (demi-soupir)
+        return `<circle cx="${x - 2}" cy="${y - 4}" r="2.3" fill="#3B281B"/><path d="M${x-2},${y-4} Q${x+2},${y-2} ${x+4},${y-6} L${x-1},${y+9}" fill="none" stroke="#3B281B" stroke-width="1.8" stroke-linecap="round"/>`;
+      }
+      // Sixteenth rest (quart de soupir)
+      return `
+        <circle cx="${x - 2}" cy="${y - 6}" r="2" fill="#3B281B"/>
+        <path d="M${x-2},${y-6} Q${x+2},${y-4} ${x+4},${y-7}" fill="none" stroke="#3B281B" stroke-width="1.6"/>
+        <circle cx="${x - 3}" cy="${y}" r="2" fill="#3B281B"/>
+        <path d="M${x-3},${y} Q${x+1},${y+2} ${x+3},${y-1} L${x-1},${y+11}" fill="none" stroke="#3B281B" stroke-width="1.6" stroke-linecap="round"/>
+      `;
+    }
+
+    // Pure rhythm figure renderer for Module 2 cards (no fake full-beat beams!)
+    function renderPureFigureSVG(mask, division) {
+      const w = 180;
+      const h = 60;
+      const noteY = 44;
+      const stemTopY = 12;
+      const nSub = mask.length;
+      const items = getNoteDurationsFromMask(mask, division);
+
+      // Single full beat rest
+      if (items.length === 1 && items[0].isRest) {
+        return `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">${drawRestGlyph(w / 2, 30, nSub, nSub)}</svg>`;
+      }
+
+      const marginX = 28;
+      const usableW = w - marginX * 2;
+      const stepX = usableW / nSub;
+
+      let svg = '';
+      const stemNotes = [];
+
+      items.forEach(item => {
+        const cx = marginX + (item.start + 0.5) * stepX;
+        if (item.isRest) {
+          svg += drawRestGlyph(cx, 32, item.span, nSub);
+        } else {
+          // Determine note type
+          const isQuarter = (nSub === 4 && item.span === 4) || ((nSub === 3 || nSub === 6) && item.span === nSub) || (nSub === 5 && item.span === 5);
+          const isDotted = (nSub === 4 && item.span === 3) || (nSub === 6 && (item.span === 3 || item.span === 6)) || (nSub === 3 && item.span === 3);
+          const needsDoubleBeam = (nSub === 4 && item.span === 1) || (nSub === 6 && item.span === 1) || nSub === 5;
+          const needsSingleBeam = !isQuarter;
+
+          // Notehead
+          svg += `<ellipse cx="${cx}" cy="${noteY}" rx="5.2" ry="3.8" transform="rotate(-18 ${cx} ${noteY})" fill="#3B281B"/>`;
+          if (isDotted && !isQuarter) {
+            svg += `<circle cx="${cx + 8.5}" cy="${noteY - 1}" r="1.8" fill="#3B281B"/>`;
+          }
+
+          // Stem
+          const stemX = cx + 4.5;
+          svg += `<line x1="${stemX}" y1="${noteY}" x2="${stemX}" y2="${stemTopY}" stroke="#3B281B" stroke-width="1.8"/>`;
+
+          if (needsSingleBeam) {
+            stemNotes.push({ x: stemX, double: needsDoubleBeam, start: item.start, span: item.span });
+          }
+        }
+      });
+
+      // Beams for grouped notes
+      if (stemNotes.length === 1) {
+        const sn = stemNotes[0];
+        svg += `<path d="M${sn.x},${stemTopY} Q${sn.x+7},${stemTopY+5} ${sn.x+5},${stemTopY+12}" fill="none" stroke="#3B281B" stroke-width="2"/>`;
+        if (sn.double) {
+          svg += `<path d="M${sn.x},${stemTopY+5} Q${sn.x+7},${stemTopY+10} ${sn.x+5},${stemTopY+17}" fill="none" stroke="#3B281B" stroke-width="2"/>`;
+        }
+      } else if (stemNotes.length > 1) {
+        const firstX = stemNotes[0].x;
+        const lastX = stemNotes[stemNotes.length - 1].x;
+        // Primary beam
+        svg += `<line x1="${firstX}" y1="${stemTopY}" x2="${lastX}" y2="${stemTopY}" stroke="#3B281B" stroke-width="3.6"/>`;
+
+        // Secondary beam / inner hooks
+        for (let idx = 0; idx < stemNotes.length; idx++) {
+          const curr = stemNotes[idx];
+          if (!curr.double) continue;
+          const prev = idx > 0 ? stemNotes[idx - 1] : null;
+          const next = idx < stemNotes.length - 1 ? stemNotes[idx + 1] : null;
+
+          if (next && next.double && (curr.start + curr.span === next.start)) {
+            svg += `<line x1="${curr.x}" y1="${stemTopY + 5.5}" x2="${next.x}" y2="${stemTopY + 5.5}" stroke="#3B281B" stroke-width="3.2"/>`;
+          } else if (!(prev && prev.double && (prev.start + prev.span === curr.start))) {
+            // Isolated 16th note inside beam group: hook MUST point strictly inward!
+            const hookLen = Math.min(8, (lastX - firstX) * 0.45);
+            if (idx === stemNotes.length - 1) {
+              // Last note -> point LEFT (inward)
+              const xStart = Math.max(firstX, curr.x - hookLen);
+              svg += `<line x1="${xStart}" y1="${stemTopY + 5.5}" x2="${curr.x}" y2="${stemTopY + 5.5}" stroke="#3B281B" stroke-width="3.2"/>`;
+            } else {
+              // First or middle note -> point RIGHT (inward)
+              const xEnd = Math.min(lastX, curr.x + hookLen);
+              svg += `<line x1="${curr.x}" y1="${stemTopY + 5.5}" x2="${xEnd}" y2="${stemTopY + 5.5}" stroke="#3B281B" stroke-width="3.2"/>`;
+            }
+          }
+        }
+      }
+
+      return `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">${svg}</svg>`;
+    }
+
+    // =========================================================================
+    // 5. SCORE GENERATION & INTERACTIVE STAFF RENDERING
+    // =========================================================================
+    function generateScore() {
+      const div = DIVISIONS[state.division];
+      const allowedPatterns = div.patterns.filter(p => state.enabledIds.has(p.id));
+      const allowUnisons = document.getElementById('unisonCheck').checked;
+      const densityFactor = state.density / 100;
+
+      state.scoreData = [];
+
+      for (let m = 0; m < state.measuresCount; m++) {
+        const measure = [];
+        for (let b = 0; b < div.beatsPerMeasure; b++) {
+          // Pick a pattern weighted by density
+          let chosenPattern;
+          if (densityFactor === 0) {
+            chosenPattern = div.patterns[0]; // Silence
+          } else {
+            const weighted = allowedPatterns.map(pat => {
+              const hits = pat.mask.reduce((a, c) => a + c, 0);
+              const hitRatio = hits / pat.mask.length;
+              // Distance between pattern density and target density
+              const diff = Math.abs(hitRatio - densityFactor);
+              const weight = Math.max(0.05, 1.2 - diff * 1.3);
+              return { pat, weight };
+            });
+            const totalW = weighted.reduce((acc, w) => acc + w.weight, 0);
+            let r = Math.random() * totalW;
+            chosenPattern = weighted[0].pat;
+            for (const item of weighted) {
+              r -= item.weight;
+              if (r <= 0) {
+                chosenPattern = item.pat;
+                break;
+              }
+            }
+          }
+
+          const beatSubs = [];
+          for (let s = 0; s < div.subdivsPerBeat; s++) {
+            const hh = state.hhPattern[s] || 0;
+            let voice = 0;
+            if (chosenPattern.mask[s] === 1) {
+              const rand = Math.random();
+              if (allowUnisons && rand < 0.22) {
+                voice = 3; // Unison GC + CC
+              } else if (rand < 0.61) {
+                voice = 1; // Kick (GC)
+              } else {
+                voice = 2; // Snare (CC)
+              }
+            }
+            beatSubs.push({ hh, voice });
+          }
+          measure.push(beatSubs);
+        }
+        state.scoreData.push(measure);
+      }
+
+      updateSheetHeader();
+      renderScoreSVG();
+    }
+
+    function updateSheetHeader() {
+      const div = DIVISIONS[state.division];
+      const allowUnisons = document.getElementById('unisonCheck').checked;
+      document.getElementById('sheetTitle').textContent = `Exercice d'indépendance — ${div.name}`;
+      document.getElementById('sheetMeta').textContent = `${state.measuresCount} mesure${state.measuresCount > 1 ? 's' : ''} • Tempo : ${state.tempo} BPM • Densité : ${state.density}% • ${allowUnisons ? 'Unissons autorisés' : 'Sans unissons'}`;
+    }
+
+    function toggleNoteVoice(mIdx, bIdx, sIdx) {
+      const sub = state.scoreData[mIdx][bIdx][sIdx];
+      // Cycle: 0 (Silence) -> 1 (Kick) -> 2 (Snare) -> 3 (Unison) -> 0
+      sub.voice = (sub.voice + 1) % 4;
+      playPreviewHit(sub.hh, sub.voice);
+      renderScoreSVG();
+    }
+
+    function renderScoreSVG() {
+      const div = DIVISIONS[state.division];
+      const container = document.getElementById('scoreContainer');
+      const measuresPerLine = state.measuresCount === 1 ? 1 : 2;
+      const linesCount = Math.ceil(state.measuresCount / measuresPerLine);
+
+      const svgWidth = 1120;
+      const lineHeight = 148;
+      const svgHeight = linesCount * lineHeight + 20;
+
+      // Staff line Y coordinates relative to line top
+      // 5 lines spaced by 9px: L1(top)=46, L2=55, L3=64, L4=73, L5(bottom)=82
+      const staffTop = 46;
+      const lineGap = 9;
+      const yHH = staffTop - 6;            // Above top line (Hi-Hat X)
+      const ySnare = staffTop + lineGap * 1.5; // 3rd space from bottom (between L2 & L3)
+      const yKick = staffTop + lineGap * 3.5;  // 1st space from bottom (between L4 & L5)
+      const stemUpTop = 20;
+      const stemDownBottom = 108;
+
+      let svg = `<svg width="100%" viewBox="0 0 ${svgWidth} ${svgHeight}" xmlns="http://www.w3.org/2000/svg">`;
+
+      for (let line = 0; line < linesCount; line++) {
+        const yOffset = line * lineHeight + 10;
+        const startX = 24;
+        const endX = svgWidth - 24;
+
+        // Draw 5 staff lines
+        for (let l = 0; l < 5; l++) {
+          const ly = yOffset + staffTop + l * lineGap;
+          svg += `<line x1="${startX}" y1="${ly}" x2="${endX}" y2="${ly}" stroke="#5C402C" stroke-width="1.2"/>`;
+        }
+
+        // Left barline
+        svg += `<line x1="${startX}" y1="${yOffset + staffTop}" x2="${startX}" y2="${yOffset + staffTop + 4 * lineGap}" stroke="#3B281B" stroke-width="2"/>`;
+
+        let cursorX = startX + 14;
+        // Neutral Percussion Clef
+        svg += `<rect x="${cursorX}" y="${yOffset + staffTop + 9}" width="3.5" height="18" fill="#3B281B"/>`;
+        svg += `<rect x="${cursorX + 6.5}" y="${yOffset + staffTop + 9}" width="3.5" height="18" fill="#3B281B"/>`;
+        cursorX += 20;
+
+        // Time Signature on first line
+        if (line === 0) {
+          svg += `<text x="${cursorX + 8}" y="${yOffset + staffTop + 15}" font-size="18" font-weight="800" text-anchor="middle" fill="#3B281B">${div.timeSigTop}</text>`;
+          svg += `<text x="${cursorX + 8}" y="${yOffset + staffTop + 33}" font-size="18" font-weight="800" text-anchor="middle" fill="#3B281B">${div.timeSigBottom}</text>`;
+          cursorX += 26;
+        }
+
+        const mStart = line * measuresPerLine;
+        const mEnd = Math.min(state.measuresCount, mStart + measuresPerLine);
+        const activeMeasuresInLine = mEnd - mStart;
+        const measureWidth = (endX - cursorX) / activeMeasuresInLine;
+
+        for (let m = mStart; m < mEnd; m++) {
+          const mX = cursorX + (m - mStart) * measureWidth;
+          const beatW = (measureWidth - 20) / div.beatsPerMeasure;
+
+          // Measure number label
+          svg += `<text x="${mX + 4}" y="${yOffset + 14}" font-size="11" font-weight="700" fill="#8A715D">Mes. ${m + 1}</text>`;
+
+          for (let b = 0; b < div.beatsPerMeasure; b++) {
+            const bX = mX + 12 + b * beatW;
+            const subW = (beatW - 10) / div.subdivsPerBeat;
+            const beatData = state.scoreData[m][b];
+
+            // --- TOP VOICE: HI-HAT (Stems UP) ---
+            const hhStems = [];
+            for (let s = 0; s < div.subdivsPerBeat; s++) {
+              const cx = bX + (s + 0.5) * subW;
+              const globalStep = (m * div.beatsPerMeasure + b) * div.subdivsPerBeat + s;
+              const isCurrentPlay = state.isPlaying && state.currentPlayStep === globalStep;
+
+              if (isCurrentPlay) {
+                svg += `<rect x="${cx - subW * 0.45}" y="${yOffset + 14}" width="${subW * 0.9}" height="106" rx="4" fill="rgba(200, 109, 81, 0.22)"/>`;
+              }
+
+              // Clickable hit target for manual editing
+              svg += `<rect x="${cx - subW * 0.45}" y="${yOffset + staffTop - 4}" width="${subW * 0.9}" height="62" fill="transparent" style="cursor:pointer;" onclick="toggleNoteVoice(${m},${b},${s})"/>`;
+
+              if (beatData[s].hh === 1) {
+                const ny = yOffset + yHH;
+                const sy = yOffset + stemUpTop;
+                const sx = cx + 4;
+                // X notehead
+                svg += `<line x1="${cx - 4}" y1="${ny - 4}" x2="${cx + 4}" y2="${ny + 4}" stroke="#3B281B" stroke-width="1.8"/>`;
+                svg += `<line x1="${cx - 4}" y1="${ny + 4}" x2="${cx + 4}" y2="${ny - 4}" stroke="#3B281B" stroke-width="1.8"/>`;
+                // Stem up
+                svg += `<line x1="${sx}" y1="${ny}" x2="${sx}" y2="${sy}" stroke="#3B281B" stroke-width="1.5"/>`;
+                hhStems.push({ x: sx, y: sy, sub: s });
+              }
+            }
+
+            // Beam Hi-Hat notes in beat
+            if (hhStems.length > 1) {
+              const fx = hhStems[0].x;
+              const lx = hhStems[hhStems.length - 1].x;
+              const by = yOffset + stemUpTop;
+              svg += `<line x1="${fx}" y1="${by}" x2="${lx}" y2="${by}" stroke="#3B281B" stroke-width="3"/>`;
+              if (div.subdivsPerBeat >= 4) {
+                // Secondary beam if consecutive subdivisions
+                for (let k = 0; k < hhStems.length - 1; k++) {
+                  if (hhStems[k + 1].sub - hhStems[k].sub === 1) {
+                    svg += `<line x1="${hhStems[k].x}" y1="${by + 4.5}" x2="${hhStems[k + 1].x}" y2="${by + 4.5}" stroke="#3B281B" stroke-width="2.5"/>`;
+                  }
+                }
+              }
+            }
+
+            // Tuplet bracket number (3, 5, 6)
+            if (div.subdivsPerBeat === 3 || div.subdivsPerBeat === 5 || div.subdivsPerBeat === 6) {
+              const midX = bX + (beatW - 10) / 2;
+              svg += `<text x="${midX}" y="${yOffset + 13}" font-size="10.5" font-weight="800" text-anchor="middle" fill="#5C402C">${div.subdivsPerBeat}</text>`;
+            }
+
+            // --- BOTTOM VOICE: KICK & SNARE (Stems DOWN with strict inner hooks) ---
+            const mask = beatData.map(sub => (sub.voice > 0 ? 1 : 0));
+            const items = getNoteDurationsFromMask(mask, state.division);
+            const nSub = div.subdivsPerBeat;
+            const bottomStems = [];
+
+            if (items.length === 1 && items[0].isRest) {
+              const midX = bX + (beatW - 10) / 2;
+              svg += drawRestGlyph(midX, yOffset + staffTop + 18, nSub, nSub);
+            } else {
+              items.forEach(item => {
+                const cx = bX + (item.start + 0.5) * subW;
+                if (item.isRest) {
+                  svg += drawRestGlyph(cx, yOffset + staffTop + 20, item.span, nSub);
+                } else {
+                  const v = beatData[item.start].voice;
+                  const isQuarter = (nSub === 4 && item.span === 4) || ((nSub === 3 || nSub === 6) && item.span === nSub) || (nSub === 5 && item.span === 5);
+                  const isDotted = (nSub === 4 && item.span === 3) || (nSub === 6 && (item.span === 3 || item.span === 6)) || (nSub === 3 && item.span === 3);
+                  const needsDoubleBeam = (nSub === 4 && item.span === 1) || (nSub === 6 && item.span === 1) || nSub === 5;
+                  const needsSingleBeam = !isQuarter;
+
+                  const stemX = cx - 4.5;
+                  const stemBot = yOffset + stemDownBottom;
+                  let topNoteY = yOffset + yKick;
+
+                  if (v === 1 || v === 3) {
+                    const ky = yOffset + yKick;
+                    svg += `<ellipse cx="${cx}" cy="${ky}" rx="4.8" ry="3.5" transform="rotate(-18 ${cx} ${ky})" fill="#3B281B"/>`;
+                    if (isDotted && !isQuarter) {
+                      svg += `<circle cx="${cx + 8}" cy="${ky - 1}" r="1.7" fill="#3B281B"/>`;
+                    }
+                  }
+                  if (v === 2 || v === 3) {
+                    const sy = yOffset + ySnare;
+                    topNoteY = sy;
+                    svg += `<ellipse cx="${cx}" cy="${sy}" rx="4.8" ry="3.5" transform="rotate(-18 ${cx} ${sy})" fill="#3B281B"/>`;
+                    if (isDotted && !isQuarter) {
+                      svg += `<circle cx="${cx + 8}" cy="${sy - 1}" r="1.7" fill="#3B281B"/>`;
+                    }
+                  }
+
+                  // Stem down from highest notehead
+                  svg += `<line x1="${stemX}" y1="${topNoteY}" x2="${stemX}" y2="${stemBot}" stroke="#3B281B" stroke-width="1.6"/>`;
+
+                  if (needsSingleBeam) {
+                    bottomStems.push({ x: stemX, double: needsDoubleBeam, start: item.start, span: item.span });
+                  }
+                }
+              });
+
+              // Bottom beams & strict inward hooks
+              const beamY = yOffset + stemDownBottom;
+              if (bottomStems.length === 1) {
+                const sn = bottomStems[0];
+                svg += `<path d="M${sn.x},${beamY} Q${sn.x+7},${beamY-5} ${sn.x+5},${beamY-11}" fill="none" stroke="#3B281B" stroke-width="1.9"/>`;
+                if (sn.double) {
+                  svg += `<path d="M${sn.x},${beamY-5} Q${sn.x+7},${beamY-10} ${sn.x+5},${beamY-16}" fill="none" stroke="#3B281B" stroke-width="1.9"/>`;
+                }
+              } else if (bottomStems.length > 1) {
+                const firstX = bottomStems[0].x;
+                const lastX = bottomStems[bottomStems.length - 1].x;
+                svg += `<line x1="${firstX}" y1="${beamY}" x2="${lastX}" y2="${beamY}" stroke="#3B281B" stroke-width="3.4"/>`;
+
+                for (let idx = 0; idx < bottomStems.length; idx++) {
+                  const curr = bottomStems[idx];
+                  if (!curr.double) continue;
+                  const prev = idx > 0 ? bottomStems[idx - 1] : null;
+                  const next = idx < bottomStems.length - 1 ? bottomStems[idx + 1] : null;
+
+                  if (next && next.double && (curr.start + curr.span === next.start)) {
+                    svg += `<line x1="${curr.x}" y1="${beamY - 5}" x2="${next.x}" y2="${beamY - 5}" stroke="#3B281B" stroke-width="3"/>`;
+                  } else if (!(prev && prev.double && (prev.start + prev.span === curr.start))) {
+                    const hookLen = Math.min(8, (lastX - firstX) * 0.45);
+                    if (idx === bottomStems.length - 1) {
+                      // Last note: hook strictly LEFT (inward)
+                      const xStart = Math.max(firstX, curr.x - hookLen);
+                      svg += `<line x1="${xStart}" y1="${beamY - 5}" x2="${curr.x}" y2="${beamY - 5}" stroke="#3B281B" stroke-width="3"/>`;
+                    } else {
+                      // First/middle note: hook strictly RIGHT (inward)
+                      const xEnd = Math.min(lastX, curr.x + hookLen);
+                      svg += `<line x1="${curr.x}" y1="${beamY - 5}" x2="${xEnd}" y2="${beamY - 5}" stroke="#3B281B" stroke-width="3"/>`;
+                    }
+                  }
+                }
+              }
+            }
+          }
+
+          // End of measure barline
+          const barX = mX + measureWidth;
+          const isFinalBar = (m === state.measuresCount - 1);
+          if (isFinalBar) {
+            svg += `<line x1="${barX - 5}" y1="${yOffset + staffTop}" x2="${barX - 5}" y2="${yOffset + staffTop + 4 * lineGap}" stroke="#3B281B" stroke-width="1.4"/>`;
+            svg += `<line x1="${barX}" y1="${yOffset + staffTop}" x2="${barX}" y2="${yOffset + staffTop + 4 * lineGap}" stroke="#3B281B" stroke-width="3.5"/>`;
+          } else {
+            svg += `<line x1="${barX}" y1="${yOffset + staffTop}" x2="${barX}" y2="${yOffset + staffTop + 4 * lineGap}" stroke="#3B281B" stroke-width="1.6"/>`;
+          }
+        }
+      }
+
+      svg += `</svg>`;
+      container.innerHTML = svg;
+    }
+
+    function renderLegendStaff() {
+      const container = document.getElementById('legendSvgContainer');
+      const staffTop = 18;
+      const gap = 7;
+      const yHH = staffTop - 5;
+      const ySnare = staffTop + gap * 1.5;
+      const yKick = staffTop + gap * 3.5;
+
+      container.innerHTML = `
+        <svg width="420" height="58" viewBox="0 0 420 58" xmlns="http://www.w3.org/2000/svg">
+          <text x="0" y="34" font-size="11" font-weight="800" fill="#3B281B">LEXIQUE :</text>
+          ${[0,1,2,3,4].map(l => `<line x1="64" y1="${staffTop + l*gap}" x2="410" y2="${staffTop + l*gap}" stroke="#8A715D" stroke-width="1"/>`).join('')}
+          <line x1="64" y1="${staffTop}" x2="64" y2="${staffTop + 4*gap}" stroke="#3B281B" stroke-width="1.5"/>
+
+          <!-- Charley -->
+          <line x1="82" y1="${yHH - 3.5}" x2="89" y2="${yHH + 3.5}" stroke="#3B281B" stroke-width="1.7"/>
+          <line x1="82" y1="${yHH + 3.5}" x2="89" y2="${yHH - 3.5}" stroke="#3B281B" stroke-width="1.7"/>
+          <text x="95" y="16" font-size="10.5" font-weight="700" fill="#3B281B">Charley</text>
+
+          <!-- Caisse Claire -->
+          <ellipse cx="182" cy="${ySnare}" rx="4.2" ry="3" transform="rotate(-18 182 ${ySnare})" fill="#3B281B"/>
+          <text x="191" y="32" font-size="10.5" font-weight="700" fill="#3B281B">Caisse claire</text>
+
+          <!-- Grosse Caisse -->
+          <ellipse cx="298" cy="${yKick}" rx="4.2" ry="3" transform="rotate(-18 298 ${yKick})" fill="#3B281B"/>
+          <text x="307" y="46" font-size="10.5" font-weight="700" fill="#3B281B">Grosse caisse</text>
+        </svg>
+      `;
+    }
+
+    // =========================================================================
+    // 6. HIGH-PRECISION WEB AUDIO ENGINE (LOOK-AHEAD SCHEDULER)
+    // =========================================================================
+    let audioCtx = null;
+    let schedulerTimer = null;
+    let nextNoteTime = 0.0;
+    let currentStepIndex = 0;
+    const lookaheadMs = 25.0;      // Check every 25ms
+    const scheduleAheadSec = 0.12; // Schedule 120ms ahead on hardware audio clock
+
+    function initAudio() {
+      if (!audioCtx) {
+        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+        audioCtx = new AudioContextClass();
+      }
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+    }
+
+    function playKick(time) {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(145, time);
+      osc.frequency.exponentialRampToValueAtTime(42, time + 0.11);
+
+      gain.gain.setValueAtTime(0.95, time);
+      gain.gain.exponentialRampToValueAtTime(0.001, time + 0.28);
+
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start(time);
+      osc.stop(time + 0.29);
+    }
+
+    function playSnare(time) {
+      // Noise burst
+      const bufferSize = audioCtx.sampleRate * 0.18;
+      const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < bufferSize; i++) {
+        data[i] = Math.random() * 2 - 1;
+      }
+
+      const noise = audioCtx.createBufferSource();
+      noise.buffer = buffer;
+
+      const filter = audioCtx.createBiquadFilter();
+      filter.type = 'highpass';
+      filter.frequency.setValueAtTime(900, time);
+
+      const noiseGain = audioCtx.createGain();
+      noiseGain.gain.setValueAtTime(0.55, time);
+      noiseGain.gain.exponentialRampToValueAtTime(0.001, time + 0.17);
+
+      noise.connect(filter);
+      filter.connect(noiseGain);
+      noiseGain.connect(audioCtx.destination);
+      noise.start(time);
+
+      // Drum body tone
+      const osc = audioCtx.createOscillator();
+      const oscGain = audioCtx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(190, time);
+      osc.frequency.exponentialRampToValueAtTime(95, time + 0.08);
+      oscGain.gain.setValueAtTime(0.45, time);
+      oscGain.gain.exponentialRampToValueAtTime(0.001, time + 0.1);
+
+      osc.connect(oscGain);
+      oscGain.connect(audioCtx.destination);
+      osc.start(time);
+      osc.stop(time + 0.11);
+    }
+
+    function playHiHat(time) {
+      const bufferSize = audioCtx.sampleRate * 0.06;
+      const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < bufferSize; i++) {
+        data[i] = Math.random() * 2 - 1;
+      }
+
+      const noise = audioCtx.createBufferSource();
+      noise.buffer = buffer;
+
+      const filter = audioCtx.createBiquadFilter();
+      filter.type = 'highpass';
+      filter.frequency.setValueAtTime(7500, time);
+
+      const gain = audioCtx.createGain();
+      gain.gain.setValueAtTime(0.24, time);
+      gain.gain.exponentialRampToValueAtTime(0.001, time + 0.055);
+
+      noise.connect(filter);
+      filter.connect(gain);
+      gain.connect(audioCtx.destination);
+      noise.start(time);
+    }
+
+    function playMetronomeClick(time, isDownbeat) {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(isDownbeat ? 1320 : 880, time);
+      gain.gain.setValueAtTime(0.16, time);
+      gain.gain.exponentialRampToValueAtTime(0.001, time + 0.04);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start(time);
+      osc.stop(time + 0.045);
+    }
+
+    function playPreviewHit(hh, voice) {
+      initAudio();
+      const now = audioCtx.currentTime;
+      if (hh) playHiHat(now);
+      if (voice === 1 || voice === 3) playKick(now);
+      if (voice === 2 || voice === 3) playSnare(now);
+    }
+
+    function scheduleStep(stepIdx, time) {
+      const div = DIVISIONS[state.division];
+      const totalSteps = state.measuresCount * div.beatsPerMeasure * div.subdivsPerBeat;
+      const safeIdx = stepIdx % totalSteps;
+
+      const subsPerMeasure = div.beatsPerMeasure * div.subdivsPerBeat;
+      const m = Math.floor(safeIdx / subsPerMeasure);
+      const rem = safeIdx % subsPerMeasure;
+      const b = Math.floor(rem / div.subdivsPerBeat);
+      const s = rem % div.subdivsPerBeat;
+
+      const subData = state.scoreData[m][b][s];
+
+      // Trigger drum sounds at exact hardware timestamp
+      if (subData.hh === 1) playHiHat(time);
+      if (subData.voice === 1 || subData.voice === 3) playKick(time);
+      if (subData.voice === 2 || subData.voice === 3) playSnare(time);
+
+      // Metronome on beat start
+      if (s === 0 && document.getElementById('metroCheck').checked) {
+        playMetronomeClick(time, b === 0);
+      }
+
+      // Sync visual highlight with audio timestamp
+      const delayMs = Math.max(0, (time - audioCtx.currentTime) * 1000);
+      setTimeout(() => {
+        if (!state.isPlaying) return;
+        state.currentPlayStep = safeIdx;
+        renderScoreSVG();
+      }, delayMs);
+    }
+
+    function schedulerLoop() {
+      const div = DIVISIONS[state.division];
+      const secondsPerBeat = 60.0 / state.tempo;
+      const secondsPerSub = secondsPerBeat / div.subdivsPerBeat;
+      const totalSteps = state.measuresCount * div.beatsPerMeasure * div.subdivsPerBeat;
+
+      while (nextNoteTime < audioCtx.currentTime + scheduleAheadSec) {
+        scheduleStep(currentStepIndex, nextNoteTime);
+        nextNoteTime += secondsPerSub;
+        currentStepIndex = (currentStepIndex + 1) % totalSteps;
+      }
+    }
+
+    function togglePlayback() {
+      if (state.isPlaying) {
+        stopPlayback();
+      } else {
+        startPlayback();
+      }
+    }
+
+    function startPlayback() {
+      initAudio();
+      state.isPlaying = true;
+      currentStepIndex = 0;
+      nextNoteTime = audioCtx.currentTime + 0.05;
+
+      const btn = document.getElementById('playBtn');
+      btn.textContent = '⏹ Arrêter';
+      btn.classList.add('playing');
+
+      schedulerTimer = setInterval(schedulerLoop, lookaheadMs);
+    }
+
+    function stopPlayback() {
+      state.isPlaying = false;
+      state.currentPlayStep = -1;
+      if (schedulerTimer) {
+        clearInterval(schedulerTimer);
+        schedulerTimer = null;
+      }
+      const btn = document.getElementById('playBtn');
+      btn.textContent = '▶ Écouter';
+      btn.classList.remove('playing');
+      renderScoreSVG();
+    }
+
+    // =========================================================================
+    // 7. BOOTSTRAP APP
+    // =========================================================================
+    window.addEventListener('DOMContentLoaded', () => {
+      resetEnabledForDivision('16th');
+      renderHHModule();
+      renderMeasureButtons();
+      renderLibraryModule();
+      renderLegendStaff();
+      generateScore();
+    });
+  </script>
+</body>
+</html>
