@@ -191,13 +191,13 @@
     /* Module 1: Hi-Hat */
     .hh-grid {
       display: flex;
-      gap: 8px;
-      margin-bottom: 12px;
+      gap: 6px;
+      margin-bottom: 10px;
     }
 
     .hh-btn {
       flex: 1;
-      padding: 12px 6px;
+      padding: 10px 4px;
       background: var(--bg-muted);
       border: 2px solid var(--border-brown);
       border-radius: 10px;
@@ -213,15 +213,26 @@
 
     .hh-btn .syllable {
       display: block;
-      font-size: 1.05rem;
+      font-size: 1rem;
       font-weight: 800;
     }
 
     .hh-btn .symbol {
       display: block;
-      font-size: 0.85rem;
+      font-size: 0.8rem;
       margin-top: 2px;
       opacity: 0.85;
+    }
+
+    .hh-preview-box {
+      background: #FFFFFF;
+      border: 1.5px solid var(--border-brown);
+      border-radius: 8px;
+      height: 62px;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
 
     .preset-row {
@@ -524,6 +535,7 @@
           <span class="badge-step">Main droite</span>
         </div>
         <div class="hh-grid" id="hhGrid"></div>
+        <div class="hh-preview-box" id="hhPreviewBox"></div>
         <div class="preset-row" id="hhPresets"></div>
       </div>
 
@@ -755,12 +767,11 @@
       density: 55,
       tempo: 85,
       measuresCount: 4,
-      scoreData: [], // Array of measures -> beats -> subdivisions: { hh: 0|1, voice: 0(none)|1(kick)|2(snare)|3(unison) }
+      scoreData: [],
       isPlaying: false,
       currentPlayStep: -1
     };
 
-    // Initialize enabled patterns
     function resetEnabledForDivision(divKey) {
       state.enabledIds.clear();
       DIVISIONS[divKey].patterns.forEach(p => state.enabledIds.add(p.id));
@@ -795,7 +806,7 @@
         const active = state.hhPattern[idx] === 1;
         const btn = document.createElement('button');
         btn.className = 'hh-btn' + (active ? ' active' : '');
-        btn.innerHTML = `<span class="syllable">${syl}</span><span class="symbol">${active ? '✕ Charley' : '—'}</span>`;
+        btn.innerHTML = `<span class="syllable">${syl}</span><span class="symbol">${active ? '✕' : '—'}</span>`;
         btn.onclick = () => {
           state.hhPattern[idx] = state.hhPattern[idx] ? 0 : 1;
           applyHHToScore();
@@ -804,6 +815,10 @@
         };
         grid.appendChild(btn);
       });
+
+      // Render pure rhythm preview for Hi-Hat ostinato
+      const previewBox = document.getElementById('hhPreviewBox');
+      previewBox.innerHTML = renderPureFigureSVG(state.hhPattern, state.division, true);
 
       const presetsEl = document.getElementById('hhPresets');
       presetsEl.innerHTML = '';
@@ -887,7 +902,7 @@
             <span class="rhythm-name">${pat.name}</span>
             <span class="status-pill">${isEnabled ? '✓ Actif' : 'Banni'}</span>
           </div>
-          <div class="rhythm-svg-box">${renderPureFigureSVG(pat.mask, state.division)}</div>
+          <div class="rhythm-svg-box">${renderPureFigureSVG(pat.mask, state.division, false)}</div>
           <div class="rhythm-card-footer">
             <span>Niveau ${pat.level}</span>
             <strong style="color:var(--ink-brown); letter-spacing:1px;">${activeSyllables}</strong>
@@ -909,7 +924,7 @@
       } else if (mode === 'lvl2') {
         div.patterns.filter(p => p.level <= 2).forEach(p => state.enabledIds.add(p.id));
       } else if (mode === 'none') {
-        state.enabledIds.add(div.patterns[0].id); // Keep at least silence
+        state.enabledIds.add(div.patterns[0].id);
       }
       renderLibraryModule();
       generateScore();
@@ -928,11 +943,11 @@
     }
 
     // =========================================================================
-    // 4. ENGRAVING ENGINE (PURE FIGURES & STRICT INNER HOOKS)
+    // 4. ENGRAVING ENGINE (EXACT DURATIONS, RESTS & STRICT INNER HOOKS)
     // =========================================================================
-    function getNoteDurationsFromMask(mask, division) {
+    function getNoteDurationsFromMask(mask) {
       const n = mask.length;
-      const notes = [];
+      const items = [];
       let i = 0;
       while (i < n) {
         if (mask[i] === 1) {
@@ -940,52 +955,179 @@
           while (i + span < n && mask[i + span] === 0) {
             span++;
           }
-          notes.push({ start: i, span, isRest: false });
+          items.push({ start: i, span, isRest: false });
           i += span;
         } else {
-          let span = 1;
-          while (i + span < n && mask[i + span] === 0) {
-            span++;
+          // Leading rest(s): split into standard rest durations (e.g., 2+1 in 16ths -> eighth rest + 16th rest)
+          let zeroRun = 0;
+          while (i + zeroRun < n && mask[i + zeroRun] === 0) {
+            zeroRun++;
           }
-          notes.push({ start: i, span, isRest: true });
-          i += span;
+          if (zeroRun === n) {
+            items.push({ start: 0, span: n, isRest: true });
+            break;
+          }
+          if (n === 4 && zeroRun === 3) {
+            items.push({ start: 0, span: 2, isRest: true });
+            items.push({ start: 2, span: 1, isRest: true });
+          } else if (n === 6 && zeroRun === 4) {
+            items.push({ start: 0, span: 3, isRest: true });
+            items.push({ start: 3, span: 1, isRest: true });
+          } else if (n === 6 && zeroRun === 5) {
+            items.push({ start: 0, span: 3, isRest: true });
+            items.push({ start: 3, span: 2, isRest: true });
+          } else {
+            items.push({ start: i, span: zeroRun, isRest: true });
+          }
+          i += zeroRun;
         }
       }
-      return notes;
+      return items;
     }
 
-    function drawRestGlyph(x, y, span, nSub) {
-      // Standard musical rest glyphs
-      if (span === nSub) {
-        // Full beat rest (quarter rest or dotted quarter rest)
-        const dot = (nSub === 3 || nSub === 6) ? `<circle cx="${x + 9}" cy="${y - 3}" r="1.8" fill="#3B281B"/>` : '';
-        return `<path d="M${x-2},${y-11} L${x+3},${y-5} L${x-2},${y+1} L${x+3},${y+7} C${x-1},${y+6} ${x-3},${y+9} ${x+1},${y+12}" fill="none" stroke="#3B281B" stroke-width="2.1" stroke-linecap="round"/>${dot}`;
+    function getNoteMetrics(span, nSub) {
+      // Returns { isQuarter, isDotted, beamCount }
+      if (nSub === 4) {
+        if (span === 4) return { isQuarter: true, isDotted: false, beamCount: 0 };
+        if (span === 3) return { isQuarter: false, isDotted: true, beamCount: 1 };
+        if (span === 2) return { isQuarter: false, isDotted: false, beamCount: 1 };
+        return { isQuarter: false, isDotted: false, beamCount: 2 };
       }
-      if ((nSub === 4 && span === 2) || (nSub === 6 && span === 3)) {
-        // Eighth rest (demi-soupir)
-        return `<circle cx="${x - 2}" cy="${y - 4}" r="2.3" fill="#3B281B"/><path d="M${x-2},${y-4} Q${x+2},${y-2} ${x+4},${y-6} L${x-1},${y+9}" fill="none" stroke="#3B281B" stroke-width="1.8" stroke-linecap="round"/>`;
+      if (nSub === 3) {
+        if (span === 3) return { isQuarter: true, isDotted: true, beamCount: 0 };
+        if (span === 2) return { isQuarter: true, isDotted: false, beamCount: 0 };
+        return { isQuarter: false, isDotted: false, beamCount: 1 };
+      }
+      if (nSub === 6) {
+        if (span === 6) return { isQuarter: true, isDotted: true, beamCount: 0 };
+        if (span === 4) return { isQuarter: true, isDotted: false, beamCount: 0 };
+        if (span === 3) return { isQuarter: false, isDotted: true, beamCount: 1 };
+        if (span === 2) return { isQuarter: false, isDotted: false, beamCount: 1 };
+        return { isQuarter: false, isDotted: false, beamCount: 2 };
+      }
+      // Quintuplet (nSub === 5)
+      if (span === 5) return { isQuarter: true, isDotted: false, beamCount: 0 };
+      return { isQuarter: false, isDotted: false, beamCount: 2 };
+    }
+
+    function drawRestGlyph(x, y, span, nSub, scale = 1.0) {
+      const s = scale;
+      // Full beat rest
+      if (span === nSub) {
+        const dot = (nSub === 3 || nSub === 6)
+          ? `<circle cx="${x + 7 * s}" cy="${y - 2 * s}" r="${1.7 * s}" fill="#3B281B"/>`
+          : '';
+        return `<path d="M${x - 2*s},${y - 9*s} L${x + 2.5*s},${y - 4*s} L${x - 2*s},${y + 1*s} L${x + 2.5*s},${y + 6*s} C${x - 1*s},${y + 5*s} ${x - 2.5*s},${y + 8*s} ${x + 1*s},${y + 10*s}" fill="none" stroke="#3B281B" stroke-width="${1.9 * s}" stroke-linecap="round"/>${dot}`;
+      }
+      // Quarter rest (2/3 of triplet or 4/6 of sextuplet)
+      if ((nSub === 3 && span === 2) || (nSub === 6 && span === 4)) {
+        return `<path d="M${x - 2*s},${y - 9*s} L${x + 2.5*s},${y - 4*s} L${x - 2*s},${y + 1*s} L${x + 2.5*s},${y + 6*s} C${x - 1*s},${y + 5*s} ${x - 2.5*s},${y + 8*s} ${x + 1*s},${y + 10*s}" fill="none" stroke="#3B281B" stroke-width="${1.8 * s}" stroke-linecap="round"/>`;
+      }
+      // Eighth rest (demi-soupir)
+      if ((nSub === 4 && span === 2) || (nSub === 3 && span === 1) || (nSub === 6 && (span === 2 || span === 3))) {
+        const dot = (nSub === 6 && span === 3)
+          ? `<circle cx="${x + 6 * s}" cy="${y - 3 * s}" r="${1.6 * s}" fill="#3B281B"/>`
+          : '';
+        return `<circle cx="${x - 2*s}" cy="${y - 3.5*s}" r="${2.1 * s}" fill="#3B281B"/><path d="M${x - 2*s},${y - 3.5*s} Q${x + 1.5*s},${y - 1.5*s} ${x + 3.5*s},${y - 5*s} L${x - 1*s},${y + 8*s}" fill="none" stroke="#3B281B" stroke-width="${1.7 * s}" stroke-linecap="round"/>${dot}`;
       }
       // Sixteenth rest (quart de soupir)
       return `
-        <circle cx="${x - 2}" cy="${y - 6}" r="2" fill="#3B281B"/>
-        <path d="M${x-2},${y-6} Q${x+2},${y-4} ${x+4},${y-7}" fill="none" stroke="#3B281B" stroke-width="1.6"/>
-        <circle cx="${x - 3}" cy="${y}" r="2" fill="#3B281B"/>
-        <path d="M${x-3},${y} Q${x+1},${y+2} ${x+3},${y-1} L${x-1},${y+11}" fill="none" stroke="#3B281B" stroke-width="1.6" stroke-linecap="round"/>
+        <circle cx="${x - 2*s}" cy="${y - 5*s}" r="${1.8 * s}" fill="#3B281B"/>
+        <path d="M${x - 2*s},${y - 5*s} Q${x + 1.5*s},${y - 3*s} ${x + 3.5*s},${y - 6*s}" fill="none" stroke="#3B281B" stroke-width="${1.5 * s}"/>
+        <circle cx="${x - 3*s}" cy="${y}" r="${1.8 * s}" fill="#3B281B"/>
+        <path d="M${x - 3*s},${y} Q${x + 1*s},${y + 2*s} ${x + 3*s},${y - 1*s} L${x - 1*s},${y + 9*s}" fill="none" stroke="#3B281B" stroke-width="${1.5 * s}" stroke-linecap="round"/>
       `;
     }
 
-    // Pure rhythm figure renderer for Module 2 cards (no fake full-beat beams!)
-    function renderPureFigureSVG(mask, division) {
+    function drawStemsUpBeams(stemNotes, beamTopY, beamThick = 3.2, beamStep = 5.0) {
+      let svg = '';
+      if (stemNotes.length === 1) {
+        const sn = stemNotes[0];
+        if (sn.beamCount >= 1) {
+          svg += `<path d="M${sn.x},${beamTopY} Q${sn.x + 6.5},${beamTopY + 4.5} ${sn.x + 4.5},${beamTopY + 11}" fill="none" stroke="#3B281B" stroke-width="1.8"/>`;
+        }
+        if (sn.beamCount >= 2) {
+          svg += `<path d="M${sn.x},${beamTopY + 4.5} Q${sn.x + 6.5},${beamTopY + 9} ${sn.x + 4.5},${beamTopY + 15.5}" fill="none" stroke="#3B281B" stroke-width="1.8"/>`;
+        }
+      } else if (stemNotes.length > 1) {
+        const firstX = stemNotes[0].x;
+        const lastX = stemNotes[stemNotes.length - 1].x;
+        // Primary beam
+        svg += `<line x1="${firstX}" y1="${beamTopY}" x2="${lastX}" y2="${beamTopY}" stroke="#3B281B" stroke-width="${beamThick}"/>`;
+
+        // Secondary beam / strict inner hooks
+        for (let idx = 0; idx < stemNotes.length; idx++) {
+          const curr = stemNotes[idx];
+          if (curr.beamCount < 2) continue;
+          const prev = idx > 0 ? stemNotes[idx - 1] : null;
+          const next = idx < stemNotes.length - 1 ? stemNotes[idx + 1] : null;
+
+          if (next && next.beamCount >= 2 && (curr.start + curr.span === next.start)) {
+            svg += `<line x1="${curr.x}" y1="${beamTopY + beamStep}" x2="${next.x}" y2="${beamTopY + beamStep}" stroke="#3B281B" stroke-width="${beamThick * 0.88}"/>`;
+          } else if (!(prev && prev.beamCount >= 2 && (prev.start + prev.span === curr.start))) {
+            const hookLen = Math.min(8, (lastX - firstX) * 0.45);
+            if (idx === stemNotes.length - 1) {
+              const xStart = Math.max(firstX, curr.x - hookLen);
+              svg += `<line x1="${xStart}" y1="${beamTopY + beamStep}" x2="${curr.x}" y2="${beamTopY + beamStep}" stroke="#3B281B" stroke-width="${beamThick * 0.88}"/>`;
+            } else {
+              const xEnd = Math.min(lastX, curr.x + hookLen);
+              svg += `<line x1="${curr.x}" y1="${beamTopY + beamStep}" x2="${xEnd}" y2="${beamTopY + beamStep}" stroke="#3B281B" stroke-width="${beamThick * 0.88}"/>`;
+            }
+          }
+        }
+      }
+      return svg;
+    }
+
+    function drawStemsDownBeams(stemNotes, beamBotY, beamThick = 3.2, beamStep = 5.0) {
+      let svg = '';
+      if (stemNotes.length === 1) {
+        const sn = stemNotes[0];
+        if (sn.beamCount >= 1) {
+          svg += `<path d="M${sn.x},${beamBotY} Q${sn.x + 6.5},${beamBotY - 4.5} ${sn.x + 4.5},${beamBotY - 11}" fill="none" stroke="#3B281B" stroke-width="1.8"/>`;
+        }
+        if (sn.beamCount >= 2) {
+          svg += `<path d="M${sn.x},${beamBotY - 4.5} Q${sn.x + 6.5},${beamBotY - 9} ${sn.x + 4.5},${beamBotY - 15.5}" fill="none" stroke="#3B281B" stroke-width="1.8"/>`;
+        }
+      } else if (stemNotes.length > 1) {
+        const firstX = stemNotes[0].x;
+        const lastX = stemNotes[stemNotes.length - 1].x;
+        svg += `<line x1="${firstX}" y1="${beamBotY}" x2="${lastX}" y2="${beamBotY}" stroke="#3B281B" stroke-width="${beamThick}"/>`;
+
+        for (let idx = 0; idx < stemNotes.length; idx++) {
+          const curr = stemNotes[idx];
+          if (curr.beamCount < 2) continue;
+          const prev = idx > 0 ? stemNotes[idx - 1] : null;
+          const next = idx < stemNotes.length - 1 ? stemNotes[idx + 1] : null;
+
+          if (next && next.beamCount >= 2 && (curr.start + curr.span === next.start)) {
+            svg += `<line x1="${curr.x}" y1="${beamBotY - beamStep}" x2="${next.x}" y2="${beamBotY - beamStep}" stroke="#3B281B" stroke-width="${beamThick * 0.88}"/>`;
+          } else if (!(prev && prev.beamCount >= 2 && (prev.start + prev.span === curr.start))) {
+            const hookLen = Math.min(8, (lastX - firstX) * 0.45);
+            if (idx === stemNotes.length - 1) {
+              const xStart = Math.max(firstX, curr.x - hookLen);
+              svg += `<line x1="${xStart}" y1="${beamBotY - beamStep}" x2="${curr.x}" y2="${beamBotY - beamStep}" stroke="#3B281B" stroke-width="${beamThick * 0.88}"/>`;
+            } else {
+              const xEnd = Math.min(lastX, curr.x + hookLen);
+              svg += `<line x1="${curr.x}" y1="${beamBotY - beamStep}" x2="${xEnd}" y2="${beamBotY - beamStep}" stroke="#3B281B" stroke-width="${beamThick * 0.88}"/>`;
+            }
+          }
+        }
+      }
+      return svg;
+    }
+
+    // Pure rhythm figure renderer for Module 1 (Hi-Hat) & Module 2 (Library)
+    function renderPureFigureSVG(mask, division, isHiHatX = false) {
       const w = 180;
-      const h = 60;
-      const noteY = 44;
+      const h = 58;
+      const noteY = 43;
       const stemTopY = 12;
       const nSub = mask.length;
-      const items = getNoteDurationsFromMask(mask, division);
+      const items = getNoteDurationsFromMask(mask);
 
-      // Single full beat rest
       if (items.length === 1 && items[0].isRest) {
-        return `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">${drawRestGlyph(w / 2, 30, nSub, nSub)}</svg>`;
+        return `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">${drawRestGlyph(w / 2, 30, nSub, nSub, 1.0)}</svg>`;
       }
 
       const marginX = 28;
@@ -998,66 +1140,35 @@
       items.forEach(item => {
         const cx = marginX + (item.start + 0.5) * stepX;
         if (item.isRest) {
-          svg += drawRestGlyph(cx, 32, item.span, nSub);
+          svg += drawRestGlyph(cx, 32, item.span, nSub, 0.92);
         } else {
-          // Determine note type
-          const isQuarter = (nSub === 4 && item.span === 4) || ((nSub === 3 || nSub === 6) && item.span === nSub) || (nSub === 5 && item.span === 5);
-          const isDotted = (nSub === 4 && item.span === 3) || (nSub === 6 && (item.span === 3 || item.span === 6)) || (nSub === 3 && item.span === 3);
-          const needsDoubleBeam = (nSub === 4 && item.span === 1) || (nSub === 6 && item.span === 1) || nSub === 5;
-          const needsSingleBeam = !isQuarter;
+          const metrics = getNoteMetrics(item.span, nSub);
 
-          // Notehead
-          svg += `<ellipse cx="${cx}" cy="${noteY}" rx="5.2" ry="3.8" transform="rotate(-18 ${cx} ${noteY})" fill="#3B281B"/>`;
-          if (isDotted && !isQuarter) {
+          if (isHiHatX) {
+            svg += `<line x1="${cx - 4.2}" y1="${noteY - 4.2}" x2="${cx + 4.2}" y2="${noteY + 4.2}" stroke="#3B281B" stroke-width="1.9"/>`;
+            svg += `<line x1="${cx - 4.2}" y1="${noteY + 4.2}" x2="${cx + 4.2}" y2="${noteY - 4.2}" stroke="#3B281B" stroke-width="1.9"/>`;
+          } else {
+            svg += `<ellipse cx="${cx}" cy="${noteY}" rx="5.2" ry="3.8" transform="rotate(-18 ${cx} ${noteY})" fill="#3B281B"/>`;
+          }
+
+          if (metrics.isDotted) {
             svg += `<circle cx="${cx + 8.5}" cy="${noteY - 1}" r="1.8" fill="#3B281B"/>`;
           }
 
-          // Stem
-          const stemX = cx + 4.5;
+          const stemX = cx + 4.2;
           svg += `<line x1="${stemX}" y1="${noteY}" x2="${stemX}" y2="${stemTopY}" stroke="#3B281B" stroke-width="1.8"/>`;
 
-          if (needsSingleBeam) {
-            stemNotes.push({ x: stemX, double: needsDoubleBeam, start: item.start, span: item.span });
+          if (!metrics.isQuarter) {
+            stemNotes.push({ x: stemX, beamCount: metrics.beamCount, start: item.start, span: item.span });
           }
         }
       });
 
-      // Beams for grouped notes
-      if (stemNotes.length === 1) {
-        const sn = stemNotes[0];
-        svg += `<path d="M${sn.x},${stemTopY} Q${sn.x+7},${stemTopY+5} ${sn.x+5},${stemTopY+12}" fill="none" stroke="#3B281B" stroke-width="2"/>`;
-        if (sn.double) {
-          svg += `<path d="M${sn.x},${stemTopY+5} Q${sn.x+7},${stemTopY+10} ${sn.x+5},${stemTopY+17}" fill="none" stroke="#3B281B" stroke-width="2"/>`;
-        }
-      } else if (stemNotes.length > 1) {
-        const firstX = stemNotes[0].x;
-        const lastX = stemNotes[stemNotes.length - 1].x;
-        // Primary beam
-        svg += `<line x1="${firstX}" y1="${stemTopY}" x2="${lastX}" y2="${stemTopY}" stroke="#3B281B" stroke-width="3.6"/>`;
+      svg += drawStemsUpBeams(stemNotes, stemTopY, 3.4, 5.2);
 
-        // Secondary beam / inner hooks
-        for (let idx = 0; idx < stemNotes.length; idx++) {
-          const curr = stemNotes[idx];
-          if (!curr.double) continue;
-          const prev = idx > 0 ? stemNotes[idx - 1] : null;
-          const next = idx < stemNotes.length - 1 ? stemNotes[idx + 1] : null;
-
-          if (next && next.double && (curr.start + curr.span === next.start)) {
-            svg += `<line x1="${curr.x}" y1="${stemTopY + 5.5}" x2="${next.x}" y2="${stemTopY + 5.5}" stroke="#3B281B" stroke-width="3.2"/>`;
-          } else if (!(prev && prev.double && (prev.start + prev.span === curr.start))) {
-            // Isolated 16th note inside beam group: hook MUST point strictly inward!
-            const hookLen = Math.min(8, (lastX - firstX) * 0.45);
-            if (idx === stemNotes.length - 1) {
-              // Last note -> point LEFT (inward)
-              const xStart = Math.max(firstX, curr.x - hookLen);
-              svg += `<line x1="${xStart}" y1="${stemTopY + 5.5}" x2="${curr.x}" y2="${stemTopY + 5.5}" stroke="#3B281B" stroke-width="3.2"/>`;
-            } else {
-              // First or middle note -> point RIGHT (inward)
-              const xEnd = Math.min(lastX, curr.x + hookLen);
-              svg += `<line x1="${curr.x}" y1="${stemTopY + 5.5}" x2="${xEnd}" y2="${stemTopY + 5.5}" stroke="#3B281B" stroke-width="3.2"/>`;
-            }
-          }
-        }
+      // Tuplet number for 3, 5, 6 when subdivided
+      if ((nSub === 3 || nSub === 5 || nSub === 6) && stemNotes.length > 1) {
+        svg += `<text x="${w / 2}" y="9.5" font-size="10" font-weight="800" text-anchor="middle" fill="#5C402C">${nSub}</text>`;
       }
 
       return `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">${svg}</svg>`;
@@ -1077,15 +1188,13 @@
       for (let m = 0; m < state.measuresCount; m++) {
         const measure = [];
         for (let b = 0; b < div.beatsPerMeasure; b++) {
-          // Pick a pattern weighted by density
           let chosenPattern;
           if (densityFactor === 0) {
-            chosenPattern = div.patterns[0]; // Silence
+            chosenPattern = div.patterns[0];
           } else {
             const weighted = allowedPatterns.map(pat => {
               const hits = pat.mask.reduce((a, c) => a + c, 0);
               const hitRatio = hits / pat.mask.length;
-              // Distance between pattern density and target density
               const diff = Math.abs(hitRatio - densityFactor);
               const weight = Math.max(0.05, 1.2 - diff * 1.3);
               return { pat, weight };
@@ -1109,11 +1218,11 @@
             if (chosenPattern.mask[s] === 1) {
               const rand = Math.random();
               if (allowUnisons && rand < 0.22) {
-                voice = 3; // Unison GC + CC
+                voice = 3;
               } else if (rand < 0.61) {
-                voice = 1; // Kick (GC)
+                voice = 1;
               } else {
-                voice = 2; // Snare (CC)
+                voice = 2;
               }
             }
             beatSubs.push({ hh, voice });
@@ -1136,7 +1245,6 @@
 
     function toggleNoteVoice(mIdx, bIdx, sIdx) {
       const sub = state.scoreData[mIdx][bIdx][sIdx];
-      // Cycle: 0 (Silence) -> 1 (Kick) -> 2 (Snare) -> 3 (Unison) -> 0
       sub.voice = (sub.voice + 1) % 4;
       playPreviewHit(sub.hh, sub.voice);
       renderScoreSVG();
@@ -1149,18 +1257,18 @@
       const linesCount = Math.ceil(state.measuresCount / measuresPerLine);
 
       const svgWidth = 1120;
-      const lineHeight = 148;
+      const lineHeight = 154;
       const svgHeight = linesCount * lineHeight + 20;
 
-      // Staff line Y coordinates relative to line top
-      // 5 lines spaced by 9px: L1(top)=46, L2=55, L3=64, L4=73, L5(bottom)=82
-      const staffTop = 46;
+      const staffTop = 48;
       const lineGap = 9;
-      const yHH = staffTop - 6;            // Above top line (Hi-Hat X)
-      const ySnare = staffTop + lineGap * 1.5; // 3rd space from bottom (between L2 & L3)
-      const yKick = staffTop + lineGap * 3.5;  // 1st space from bottom (between L4 & L5)
-      const stemUpTop = 20;
-      const stemDownBottom = 108;
+      const yHH = staffTop - 6;
+      const yHHRest = staffTop - 16;
+      const ySnare = staffTop + lineGap * 1.5;
+      const yKick = staffTop + lineGap * 3.5;
+      const stemUpTop = 18;
+      const stemDownBottom = 110;
+      const nSub = div.subdivsPerBeat;
 
       let svg = `<svg width="100%" viewBox="0 0 ${svgWidth} ${svgHeight}" xmlns="http://www.w3.org/2000/svg">`;
 
@@ -1169,7 +1277,7 @@
         const startX = 24;
         const endX = svgWidth - 24;
 
-        // Draw 5 staff lines
+        // 5 staff lines
         for (let l = 0; l < 5; l++) {
           const ly = yOffset + staffTop + l * lineGap;
           svg += `<line x1="${startX}" y1="${ly}" x2="${endX}" y2="${ly}" stroke="#5C402C" stroke-width="1.2"/>`;
@@ -1179,12 +1287,10 @@
         svg += `<line x1="${startX}" y1="${yOffset + staffTop}" x2="${startX}" y2="${yOffset + staffTop + 4 * lineGap}" stroke="#3B281B" stroke-width="2"/>`;
 
         let cursorX = startX + 14;
-        // Neutral Percussion Clef
         svg += `<rect x="${cursorX}" y="${yOffset + staffTop + 9}" width="3.5" height="18" fill="#3B281B"/>`;
         svg += `<rect x="${cursorX + 6.5}" y="${yOffset + staffTop + 9}" width="3.5" height="18" fill="#3B281B"/>`;
         cursorX += 20;
 
-        // Time Signature on first line
         if (line === 0) {
           svg += `<text x="${cursorX + 8}" y="${yOffset + staffTop + 15}" font-size="18" font-weight="800" text-anchor="middle" fill="#3B281B">${div.timeSigTop}</text>`;
           svg += `<text x="${cursorX + 8}" y="${yOffset + staffTop + 33}" font-size="18" font-weight="800" text-anchor="middle" fill="#3B281B">${div.timeSigBottom}</text>`;
@@ -1200,83 +1306,87 @@
           const mX = cursorX + (m - mStart) * measureWidth;
           const beatW = (measureWidth - 20) / div.beatsPerMeasure;
 
-          // Measure number label
-          svg += `<text x="${mX + 4}" y="${yOffset + 14}" font-size="11" font-weight="700" fill="#8A715D">Mes. ${m + 1}</text>`;
+          svg += `<text x="${mX + 4}" y="${yOffset + 13}" font-size="11" font-weight="700" fill="#8A715D">Mes. ${m + 1}</text>`;
 
           for (let b = 0; b < div.beatsPerMeasure; b++) {
             const bX = mX + 12 + b * beatW;
-            const subW = (beatW - 10) / div.subdivsPerBeat;
+            const subW = (beatW - 10) / nSub;
             const beatData = state.scoreData[m][b];
 
-            // --- TOP VOICE: HI-HAT (Stems UP) ---
-            const hhStems = [];
-            for (let s = 0; s < div.subdivsPerBeat; s++) {
+            // Playback cursor & clickable zones for each subdivision
+            for (let s = 0; s < nSub; s++) {
               const cx = bX + (s + 0.5) * subW;
-              const globalStep = (m * div.beatsPerMeasure + b) * div.subdivsPerBeat + s;
+              const globalStep = (m * div.beatsPerMeasure + b) * nSub + s;
               const isCurrentPlay = state.isPlaying && state.currentPlayStep === globalStep;
 
               if (isCurrentPlay) {
-                svg += `<rect x="${cx - subW * 0.45}" y="${yOffset + 14}" width="${subW * 0.9}" height="106" rx="4" fill="rgba(200, 109, 81, 0.22)"/>`;
+                svg += `<rect x="${cx - subW * 0.45}" y="${yOffset + 12}" width="${subW * 0.9}" height="108" rx="4" fill="rgba(200, 109, 81, 0.22)"/>`;
               }
 
-              // Clickable hit target for manual editing
               svg += `<rect x="${cx - subW * 0.45}" y="${yOffset + staffTop - 4}" width="${subW * 0.9}" height="62" fill="transparent" style="cursor:pointer;" onclick="toggleNoteVoice(${m},${b},${s})"/>`;
-
-              if (beatData[s].hh === 1) {
-                const ny = yOffset + yHH;
-                const sy = yOffset + stemUpTop;
-                const sx = cx + 4;
-                // X notehead
-                svg += `<line x1="${cx - 4}" y1="${ny - 4}" x2="${cx + 4}" y2="${ny + 4}" stroke="#3B281B" stroke-width="1.8"/>`;
-                svg += `<line x1="${cx - 4}" y1="${ny + 4}" x2="${cx + 4}" y2="${ny - 4}" stroke="#3B281B" stroke-width="1.8"/>`;
-                // Stem up
-                svg += `<line x1="${sx}" y1="${ny}" x2="${sx}" y2="${sy}" stroke="#3B281B" stroke-width="1.5"/>`;
-                hhStems.push({ x: sx, y: sy, sub: s });
-              }
             }
 
-            // Beam Hi-Hat notes in beat
-            if (hhStems.length > 1) {
-              const fx = hhStems[0].x;
-              const lx = hhStems[hhStems.length - 1].x;
-              const by = yOffset + stemUpTop;
-              svg += `<line x1="${fx}" y1="${by}" x2="${lx}" y2="${by}" stroke="#3B281B" stroke-width="3"/>`;
-              if (div.subdivsPerBeat >= 4) {
-                // Secondary beam if consecutive subdivisions
-                for (let k = 0; k < hhStems.length - 1; k++) {
-                  if (hhStems[k + 1].sub - hhStems[k].sub === 1) {
-                    svg += `<line x1="${hhStems[k].x}" y1="${by + 4.5}" x2="${hhStems[k + 1].x}" y2="${by + 4.5}" stroke="#3B281B" stroke-width="2.5"/>`;
+            // --- TOP VOICE: HI-HAT (Exact rhythmic durations, rests & beams) ---
+            const hhMask = beatData.map(sub => sub.hh);
+            const hhItems = getNoteDurationsFromMask(hhMask);
+            const hhStems = [];
+
+            if (hhItems.length === 1 && hhItems[0].isRest) {
+              const midX = bX + (beatW - 10) / 2;
+              svg += drawRestGlyph(midX, yOffset + yHHRest, nSub, nSub, 0.78);
+            } else {
+              hhItems.forEach(item => {
+                const cx = bX + (item.start + 0.5) * subW;
+                if (item.isRest) {
+                  svg += drawRestGlyph(cx, yOffset + yHHRest, item.span, nSub, 0.74);
+                } else {
+                  const metrics = getNoteMetrics(item.span, nSub);
+                  const ny = yOffset + yHH;
+                  const sy = yOffset + stemUpTop;
+                  const sx = cx + 4;
+
+                  // X notehead
+                  svg += `<line x1="${cx - 4}" y1="${ny - 4}" x2="${cx + 4}" y2="${ny + 4}" stroke="#3B281B" stroke-width="1.8"/>`;
+                  svg += `<line x1="${cx - 4}" y1="${ny + 4}" x2="${cx + 4}" y2="${ny - 4}" stroke="#3B281B" stroke-width="1.8"/>`;
+
+                  if (metrics.isDotted) {
+                    svg += `<circle cx="${cx + 7.5}" cy="${ny - 1}" r="1.6" fill="#3B281B"/>`;
+                  }
+
+                  // Stem up
+                  svg += `<line x1="${sx}" y1="${ny}" x2="${sx}" y2="${sy}" stroke="#3B281B" stroke-width="1.5"/>`;
+
+                  if (!metrics.isQuarter) {
+                    hhStems.push({ x: sx, beamCount: metrics.beamCount, start: item.start, span: item.span });
                   }
                 }
-              }
+              });
+
+              svg += drawStemsUpBeams(hhStems, yOffset + stemUpTop, 3.0, 4.5);
             }
 
             // Tuplet bracket number (3, 5, 6)
-            if (div.subdivsPerBeat === 3 || div.subdivsPerBeat === 5 || div.subdivsPerBeat === 6) {
+            if (nSub === 3 || nSub === 5 || nSub === 6) {
               const midX = bX + (beatW - 10) / 2;
-              svg += `<text x="${midX}" y="${yOffset + 13}" font-size="10.5" font-weight="800" text-anchor="middle" fill="#5C402C">${div.subdivsPerBeat}</text>`;
+              svg += `<text x="${midX}" y="${yOffset + 12}" font-size="10.5" font-weight="800" text-anchor="middle" fill="#5C402C">${nSub}</text>`;
             }
 
-            // --- BOTTOM VOICE: KICK & SNARE (Stems DOWN with strict inner hooks) ---
+            // --- BOTTOM VOICE: KICK & SNARE (Exact durations, rests & strict inner hooks) ---
             const mask = beatData.map(sub => (sub.voice > 0 ? 1 : 0));
-            const items = getNoteDurationsFromMask(mask, state.division);
-            const nSub = div.subdivsPerBeat;
+            const items = getNoteDurationsFromMask(mask);
             const bottomStems = [];
 
             if (items.length === 1 && items[0].isRest) {
               const midX = bX + (beatW - 10) / 2;
-              svg += drawRestGlyph(midX, yOffset + staffTop + 18, nSub, nSub);
+              svg += drawRestGlyph(midX, yOffset + staffTop + 18, nSub, nSub, 1.0);
             } else {
               items.forEach(item => {
                 const cx = bX + (item.start + 0.5) * subW;
                 if (item.isRest) {
-                  svg += drawRestGlyph(cx, yOffset + staffTop + 20, item.span, nSub);
+                  svg += drawRestGlyph(cx, yOffset + staffTop + 20, item.span, nSub, 0.92);
                 } else {
                   const v = beatData[item.start].voice;
-                  const isQuarter = (nSub === 4 && item.span === 4) || ((nSub === 3 || nSub === 6) && item.span === nSub) || (nSub === 5 && item.span === 5);
-                  const isDotted = (nSub === 4 && item.span === 3) || (nSub === 6 && (item.span === 3 || item.span === 6)) || (nSub === 3 && item.span === 3);
-                  const needsDoubleBeam = (nSub === 4 && item.span === 1) || (nSub === 6 && item.span === 1) || nSub === 5;
-                  const needsSingleBeam = !isQuarter;
+                  const metrics = getNoteMetrics(item.span, nSub);
 
                   const stemX = cx - 4.5;
                   const stemBot = yOffset + stemDownBottom;
@@ -1285,7 +1395,7 @@
                   if (v === 1 || v === 3) {
                     const ky = yOffset + yKick;
                     svg += `<ellipse cx="${cx}" cy="${ky}" rx="4.8" ry="3.5" transform="rotate(-18 ${cx} ${ky})" fill="#3B281B"/>`;
-                    if (isDotted && !isQuarter) {
+                    if (metrics.isDotted) {
                       svg += `<circle cx="${cx + 8}" cy="${ky - 1}" r="1.7" fill="#3B281B"/>`;
                     }
                   }
@@ -1293,55 +1403,20 @@
                     const sy = yOffset + ySnare;
                     topNoteY = sy;
                     svg += `<ellipse cx="${cx}" cy="${sy}" rx="4.8" ry="3.5" transform="rotate(-18 ${cx} ${sy})" fill="#3B281B"/>`;
-                    if (isDotted && !isQuarter) {
+                    if (metrics.isDotted) {
                       svg += `<circle cx="${cx + 8}" cy="${sy - 1}" r="1.7" fill="#3B281B"/>`;
                     }
                   }
 
-                  // Stem down from highest notehead
                   svg += `<line x1="${stemX}" y1="${topNoteY}" x2="${stemX}" y2="${stemBot}" stroke="#3B281B" stroke-width="1.6"/>`;
 
-                  if (needsSingleBeam) {
-                    bottomStems.push({ x: stemX, double: needsDoubleBeam, start: item.start, span: item.span });
+                  if (!metrics.isQuarter) {
+                    bottomStems.push({ x: stemX, beamCount: metrics.beamCount, start: item.start, span: item.span });
                   }
                 }
               });
 
-              // Bottom beams & strict inward hooks
-              const beamY = yOffset + stemDownBottom;
-              if (bottomStems.length === 1) {
-                const sn = bottomStems[0];
-                svg += `<path d="M${sn.x},${beamY} Q${sn.x+7},${beamY-5} ${sn.x+5},${beamY-11}" fill="none" stroke="#3B281B" stroke-width="1.9"/>`;
-                if (sn.double) {
-                  svg += `<path d="M${sn.x},${beamY-5} Q${sn.x+7},${beamY-10} ${sn.x+5},${beamY-16}" fill="none" stroke="#3B281B" stroke-width="1.9"/>`;
-                }
-              } else if (bottomStems.length > 1) {
-                const firstX = bottomStems[0].x;
-                const lastX = bottomStems[bottomStems.length - 1].x;
-                svg += `<line x1="${firstX}" y1="${beamY}" x2="${lastX}" y2="${beamY}" stroke="#3B281B" stroke-width="3.4"/>`;
-
-                for (let idx = 0; idx < bottomStems.length; idx++) {
-                  const curr = bottomStems[idx];
-                  if (!curr.double) continue;
-                  const prev = idx > 0 ? bottomStems[idx - 1] : null;
-                  const next = idx < bottomStems.length - 1 ? bottomStems[idx + 1] : null;
-
-                  if (next && next.double && (curr.start + curr.span === next.start)) {
-                    svg += `<line x1="${curr.x}" y1="${beamY - 5}" x2="${next.x}" y2="${beamY - 5}" stroke="#3B281B" stroke-width="3"/>`;
-                  } else if (!(prev && prev.double && (prev.start + prev.span === curr.start))) {
-                    const hookLen = Math.min(8, (lastX - firstX) * 0.45);
-                    if (idx === bottomStems.length - 1) {
-                      // Last note: hook strictly LEFT (inward)
-                      const xStart = Math.max(firstX, curr.x - hookLen);
-                      svg += `<line x1="${xStart}" y1="${beamY - 5}" x2="${curr.x}" y2="${beamY - 5}" stroke="#3B281B" stroke-width="3"/>`;
-                    } else {
-                      // First/middle note: hook strictly RIGHT (inward)
-                      const xEnd = Math.min(lastX, curr.x + hookLen);
-                      svg += `<line x1="${curr.x}" y1="${beamY - 5}" x2="${xEnd}" y2="${beamY - 5}" stroke="#3B281B" stroke-width="3"/>`;
-                    }
-                  }
-                }
-              }
+              svg += drawStemsDownBeams(bottomStems, yOffset + stemDownBottom, 3.3, 5.0);
             }
           }
 
@@ -1398,8 +1473,8 @@
     let schedulerTimer = null;
     let nextNoteTime = 0.0;
     let currentStepIndex = 0;
-    const lookaheadMs = 25.0;      // Check every 25ms
-    const scheduleAheadSec = 0.12; // Schedule 120ms ahead on hardware audio clock
+    const lookaheadMs = 25.0;
+    const scheduleAheadSec = 0.12;
 
     function initAudio() {
       if (!audioCtx) {
@@ -1428,7 +1503,6 @@
     }
 
     function playSnare(time) {
-      // Noise burst
       const bufferSize = audioCtx.sampleRate * 0.18;
       const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
       const data = buffer.getChannelData(0);
@@ -1452,7 +1526,6 @@
       noiseGain.connect(audioCtx.destination);
       noise.start(time);
 
-      // Drum body tone
       const osc = audioCtx.createOscillator();
       const oscGain = audioCtx.createGain();
       osc.type = 'triangle';
@@ -1526,17 +1599,14 @@
 
       const subData = state.scoreData[m][b][s];
 
-      // Trigger drum sounds at exact hardware timestamp
       if (subData.hh === 1) playHiHat(time);
       if (subData.voice === 1 || subData.voice === 3) playKick(time);
       if (subData.voice === 2 || subData.voice === 3) playSnare(time);
 
-      // Metronome on beat start
       if (s === 0 && document.getElementById('metroCheck').checked) {
         playMetronomeClick(time, b === 0);
       }
 
-      // Sync visual highlight with audio timestamp
       const delayMs = Math.max(0, (time - audioCtx.currentTime) * 1000);
       setTimeout(() => {
         if (!state.isPlaying) return;
